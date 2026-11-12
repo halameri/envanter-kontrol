@@ -1,0 +1,12 @@
+{
+  "name": "Envanter Kontrolü",
+  "short_name": "Envanter",
+  "description": "Saha envanter kontrolü - çevrimdışı çalışır",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#0f766e",
+  "lang": "tr",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

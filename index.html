@@ -1,0 +1,3053 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Envanter Kontrolü</title>
+  <meta name="theme-color" content="#0f766e">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <!-- SheetJS (Excel okuma/yazma): önce yerel kopya, yoksa CDN -->
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script>if (typeof XLSX === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
+  <!-- Chart.js (grafikler): önce yerel kopya, yoksa CDN -->
+  <script src="vendor/chart.umd.min.js"></script>
+  <script>if (typeof Chart === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>');</script>
+  <style>
+    :root {
+      --primary: #0f766e;
+      --primary-soft: #e0f2f1;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --danger: #dc2626;
+      --danger-soft: #fee2e2;
+      --ok: #16a34a;
+      --ok-soft: #dcfce7;
+      --muted-bg: #f3f4f6;
+      --card-bg: #ffffff;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: linear-gradient(135deg, #f1f5f9 0, #e0f2f1 40%, #eff6ff 100%);
+      color: var(--text-main);
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 4px;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.3px;
+    }
+
+    .subtitle {
+      margin: 0 0 16px 0;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+      border: 1px solid #e5e7eb;
+      border-top: 3px solid var(--primary);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 18px;
+      color: var(--primary);
+    }
+
+    label {
+      font-size: 13px;
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    select, input[type="file"], input[type="text"], input[type="password"], button {
+      padding: 7px 11px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      border-radius: 8px;
+      border: 1px solid #d1d5db;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    select, input[type="text"], input[type="password"] {
+      min-width: 220px;
+      background: #f9fafb;
+    }
+
+    input[type="file"] {
+      background: #fff;
+    }
+
+    select:focus, input[type="text"]:focus, input[type="password"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent-soft);
+    }
+
+    button {
+      cursor: pointer;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent), #1d4ed8);
+      color: #fff;
+      font-weight: 500;
+      padding-inline: 18px;
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+      transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.42);
+    }
+
+    button.secondary {
+      background: linear-gradient(135deg, #4b5563, #111827);
+      box-shadow: 0 5px 14px rgba(55, 65, 81, 0.5);
+    }
+
+    button.secondary:hover:not(:disabled) {
+      box-shadow: 0 7px 18px rgba(31, 41, 55, 0.6);
+    }
+
+    button.small-btn {
+      font-size: 11px;
+      padding: 4px 10px;
+      margin-right: 6px;
+      box-shadow: none;
+      background: #f3f4f6;
+      color: #111827;
+      border-radius: 999px;
+      border: 1px solid #d4d4d8;
+    }
+
+    button.small-btn:hover:not(:disabled) {
+      background: #e5e7eb;
+    }
+
+    button.icon-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding-inline: 12px;
+      font-size: 12px;
+      background: #0f172a;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.4);
+    }
+
+    button.icon-btn span {
+      font-size: 14px;
+    }
+
+    button:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid #e5e7eb;
+      padding: 8px;
+      border-radius: 8px;
+      background: #f9fafb;
+    }
+
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin: 0;
+      font-size: 12px;
+      color: #1f2933;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      accent-color: var(--primary);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12px;
+      margin-top: 6px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #ffffff;
+      display: table;
+    }
+
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 4px 6px;
+      vertical-align: top;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: linear-gradient(90deg, #e5f3ff, #e0f2f1);
+      z-index: 1;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    tbody tr:hover {
+      background: #eff6ff;
+    }
+
+    .status-ok {
+      background: var(--ok-soft);
+    }
+    .status-wrong {
+      background: var(--danger-soft);
+    }
+    .status-not {
+      background: #f3f4f6;
+    }
+
+    .small-input {
+      width: 130px;
+      font-size: 11px;
+      border-radius: 6px;
+      border: 1px solid #d4d4d8;
+      background: #f9fafb;
+    }
+
+    .small-select {
+      font-size: 11px;
+      border-radius: 6px;
+      border: 1px solid #d4d4d8;
+      background: #f9fafb;
+      margin-top: 2px;
+      margin-bottom: 2px;
+    }
+
+    .sheet-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      gap: 10px;
+    }
+
+    .sheet-title {
+      margin: 0;
+      font-size: 15px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .status-text {
+      margin-top: 6px;
+      font-size: 12px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .summary-card {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 12px;
+      border: 1px solid #e5e7eb;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .summary-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top left, rgba(37, 99, 235, 0.08), transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .summary-card span.label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 11px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .summary-card span.value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      position: relative;
+      z-index: 1;
+    }
+
+    .summary-card.red span.value { color: var(--danger); }
+    .summary-card.green span.value { color: var(--ok); }
+    .summary-card.blue span.value { color: var(--accent); }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 10px;
+    }
+
+    .chart-card {
+      background: #f9fafb;
+      border-radius: 12px;
+      padding: 10px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .chart-card h3 {
+      margin: 0 0 4px 0;
+      font-size: 13px;
+      color: var(--text-main);
+    }
+
+    .mini-table-title {
+      margin-top: 12px;
+      margin-bottom: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .report-section-title {
+      position: sticky;
+      top: 8px;
+      z-index: 5;
+      background: linear-gradient(90deg, #e5f3ff, #e0f2f1);
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .mini-table-wrapper {
+      max-height: 220px;
+      overflow: auto;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: #ffffff;
+      position: relative;
+    }
+
+    .mini-table-wrapper table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    .mini-table-wrapper thead th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: linear-gradient(90deg, #e5f3ff, #e0f2f1);
+    }
+
+    .sheet-note-wrapper {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .sheet-note-input {
+      width: 60%;
+      max-width: 600px;
+      font-size: 11px;
+      border-radius: 6px;
+      border: 1px solid #d4d4d8;
+      padding: 4px 6px;
+      margin-left: 4px;
+      background: #f9fafb;
+    }
+
+    .col-bulk-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      padding: 6px 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--accent-soft);
+      border-radius: 8px;
+    }
+
+    .col-bulk-bar .small-select,
+    .col-bulk-bar .small-input,
+    .col-bulk-bar .small-btn {
+      margin: 0;
+    }
+
+    button.small-btn.copy-col-btn {
+      display: block;
+      margin-top: 2px;
+      font-size: 10px;
+      padding: 2px 8px;
+    }
+
+    #devicesContainer {
+      max-height: 400px;
+      overflow: auto;
+    }
+
+    .top-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .top-toolbar span {
+      font-size: 12px;
+      color: #4b5563;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+      padding: 4px;
+      background: rgba(15, 23, 42, 0.04);
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      width: fit-content;
+    }
+
+    .nav-tab {
+      border-radius: 999px;
+      border: none;
+      padding: 6px 18px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #6b7280;
+      background: transparent;
+      box-shadow: none;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-tab:hover {
+      background: rgba(148, 163, 184, 0.16);
+    }
+
+    .nav-tab.active {
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      box-shadow: 0 6px 14px rgba(15, 118, 110, 0.45);
+    }
+
+    .nav-tab-icon {
+      font-size: 15px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .tag-sehir {
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+    .tag-bolge {
+      background: #ecfdf5;
+      color: #047857;
+    }
+
+    .sehir-name-cell {
+      font-weight: 600;
+      color: #1d4ed8;
+    }
+    .bolge-name-cell {
+      font-weight: 600;
+      color: #047857;
+    }
+
+    /* Modal styles */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      width: min(900px, 100% - 24px);
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.35);
+      border: 1px solid #e5e7eb;
+      padding: 18px 20px;
+      position: relative;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--primary);
+    }
+
+    .modal-close-btn {
+      border-radius: 999px;
+      border: none;
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      background: #e5e7eb;
+      color: #111827;
+      cursor: pointer;
+    }
+
+    .modal-close-btn:hover {
+      background: #d1d5db;
+    }
+
+    /* LOGIN OVERLAY */
+    #loginOverlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(37, 99, 235, 0.32), rgba(15, 23, 42, 0.95));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .login-card {
+      background: #f9fafb;
+      border-radius: 18px;
+      padding: 20px 22px;
+      width: min(360px, 100% - 32px);
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.6);
+      border: 1px solid #e5e7eb;
+    }
+
+    .login-card h2 {
+      margin: 0 0 8px 0;
+      font-size: 20px;
+      color: #0f172a;
+    }
+
+    .login-subtitle {
+      margin: 0 0 12px 0;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .login-card label {
+      color: #111827;
+    }
+
+    .login-card input {
+      width: 100%;
+    }
+
+    .login-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .login-actions button {
+      flex: 1;
+    }
+
+    .login-hint {
+      font-size: 11px;
+      margin-top: 8px;
+      color: #6b7280;
+    }
+
+    /* Mobil uyum */
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+      }
+      .card {
+        padding: 14px 12px;
+      }
+      .flex-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      select, input[type="text"], input[type="file"], input[type="password"], button {
+        width: 100%;
+        max-width: 100%;
+      }
+      .sheet-note-input {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 4px;
+      }
+      #devicesContainer {
+        max-height: none;
+        overflow: visible;
+      }
+      table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+      }
+      th, td {
+        white-space: nowrap;
+      }
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+      .modal-card {
+        width: calc(100% - 24px);
+        max-height: 92vh;
+      }
+      .nav-tabs {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .nav-tab {
+        flex: 1;
+        justify-content: center;
+      }
+      .top-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      h1 {
+        font-size: 21px;
+      }
+      /* 16px stops iOS Safari from zooming into focused fields */
+      select, input[type="text"], input[type="password"], .small-input, .small-select, .sheet-note-input {
+        font-size: 16px;
+      }
+      button {
+        min-height: 40px;
+      }
+      button.small-btn {
+        font-size: 13px;
+        padding: 8px 10px;
+        margin-right: 0;
+      }
+      button.small-btn.copy-col-btn {
+        font-size: 12px;
+        min-height: 34px;
+      }
+      .sheet-header-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .sheet-header-row > div {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .col-bulk-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .device-table tr {
+        grid-template-columns: 1fr;
+      }
+      #checklistSummary table {
+        display: table;
+      }
+      #checklistSummary th,
+      #checklistSummary td {
+        white-space: normal;
+        word-break: break-word;
+      }
+      /* Settings modal fills the phone screen */
+      .modal-backdrop.active {
+        align-items: stretch;
+      }
+      .modal-card {
+        width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        padding: 14px 12px;
+      }
+      .modal-header {
+        position: sticky;
+        top: -14px;
+        background: var(--card-bg);
+        padding: 6px 0;
+        z-index: 2;
+      }
+    }
+
+    /* Tablet + phone: each device is a card instead of a very wide table row */
+    @media (max-width: 1024px) {
+      #devicesContainer {
+        max-height: none;
+        overflow: visible;
+      }
+      table.device-table,
+      .device-table tbody,
+      .device-table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        overflow: visible;
+      }
+      table.device-table {
+        background: transparent;
+        border-radius: 0;
+      }
+      .device-table thead {
+        display: none;
+      }
+      .device-table tr {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 8px;
+        margin: 10px 0;
+        padding: 10px;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+      }
+      .device-table tbody tr:nth-child(even),
+      .device-table tbody tr:hover {
+        background: #ffffff;
+      }
+      .device-table td {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 8px;
+        white-space: normal;
+        word-break: break-word;
+      }
+      .device-table td::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 4px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #0f172a;
+      }
+      .device-table td.device-id-cell {
+        grid-column: 1 / -1;
+        border: none;
+        background: linear-gradient(90deg, #e5f3ff, #e0f2f1);
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .device-table td.device-id-cell::before {
+        display: inline;
+        content: attr(data-label) ": ";
+        font-size: 15px;
+      }
+      .device-table .small-input,
+      .device-table .small-select {
+        width: 100%;
+        margin-top: 4px;
+      }
+      /* Save button stays reachable while scrolling long device lists */
+      #btnSaveAll {
+        position: sticky;
+        bottom: 10px;
+        z-index: 10;
+      }
+    }
+
+    /* NO-LOGIN MODE */
+    #loginOverlay { display:none !important; pointer-events:none !important; }
+    #btnLogout { display:none !important; }
+
+  </style>
+</head>
+<body>
+  <!-- LOGIN ONLY AT START -->
+  <!-- LOGIN REMOVED -->
+
+  <!-- APP CONTENT (HIDDEN UNTIL LOGIN) -->
+  <div id="appRoot">
+    <h1>Envanter Kontrolü</h1>
+    <p class="subtitle">
+      Çok sayfalı Excel dosyanızdaki enerji varlıklarının (DC, akü, jeneratör, UPS vb.) verilerini
+      konum bazlı inceleyip, alanları <b>Doğru / Hatalı / Kontrol edilmedi</b> olarak işaretleyebilir,
+      toplu düzeltmeler yapabilir ve sonuçları CSV/Excel ile raporlayabilirsiniz.
+    </p>
+
+    <!-- Top navigation -->
+    <div class="nav-tabs">
+      <button id="tabMain" class="nav-tab active">
+        <span class="nav-tab-icon">📋</span>
+        <span>Veri Kontrolü</span>
+      </button>
+      <button id="tabReports" class="nav-tab">
+        <span class="nav-tab-icon">📊</span>
+        <span>Raporlar</span>
+      </button>
+      <button id="tabUsers" class="nav-tab">
+        <span class="nav-tab-icon">👤</span>
+        <span>Kullanıcılar</span>
+      </button>
+    </div>
+
+    <!-- Global toolbar -->
+    <div class="top-toolbar">
+      <span id="currentUserLabel">Aktif kullanıcı: admin (Yönetici)</span>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="btnOpenConfig" class="icon-btn">
+          <span>⚙</span> <span>Şablon Ayarları</span>
+        </button>
+        <button id="btnLogout" class="small-btn">Çıkış</button>
+      </div>
+    </div>
+
+    <!-- CONFIG MODAL -->
+    <div id="configModal" class="modal-backdrop">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>Şablonda Kontrol Edilecek Sütunları Belirleyin</h2>
+          <button id="btnCloseConfig" class="modal-close-btn" title="Kapat">✕</button>
+        </div>
+        <p style="font-size: 12px; margin-top: 0; color: var(--text-muted);">
+          Bir sayfayı <b>şablon</b> olarak seçin. Varsayılan olarak konum sütunu <b>Merkez</b>,
+          cihaz kimliği sütunu <b>Kod</b> olarak gelir. Kontrol etmek istediğiniz sütunları işaretleyin.
+          Bu şablon yönetici (admin) tarafından <b>bir kez</b> ayarlandıktan sonra diğer kullanıcılar
+          sadece bu ayarlarla çalışır ve tekrar seçmek zorunda kalmaz.
+        </p>
+
+        <div class="flex-row">
+          <div>
+            <label for="sheetSelect">Şablon sayfa:</label>
+            <select id="sheetSelect">
+              <option value="">-- Sayfa seçin --</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="locationColSelect">Konum sütunu (varsayılan: Merkez):</label>
+            <select id="locationColSelect">
+              <option value="">-- Sütun seçin --</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="deviceColSelect">Cihaz Kod sütunu (varsayılan: Kod):</label>
+            <select id="deviceColSelect">
+              <option value="">-- Sütun seçin --</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <label>Kontrol Çizelgesi (her sayfa için kontrol edilecek alanlar):</label>
+          <p style="font-size:12px; margin:4px 0 6px 0; color: var(--text-muted);">
+            Her sayfa (şablon) kendi listesindeki alanlarla kontrol edilir. Varsayılan çizelge uygulamada hazır gelir;
+            güncellenmiş bir <b>Kontrol Çizelgesi.xlsx</b> yükleyerek değiştirebilirsiniz.
+          </p>
+          <div class="flex-row">
+            <input type="file" id="checklistFileInput" accept=".xlsx" />
+            <button id="btnLoadChecklist" class="small-btn">Çizelgeyi Yükle</button>
+            <button id="btnResetChecklist" class="small-btn">Varsayılan Çizelgeye Dön</button>
+          </div>
+          <div id="checklistStatus" class="status-text"></div>
+          <div id="checklistSummary" class="mini-table-wrapper" style="max-height:200px;"></div>
+        </div>
+
+        <div style="margin-top: 8px;">
+          <label>Çizelgede olmayan sayfalar için kontrol edilecek sütunlar:</label>
+          <div id="columnsCheckboxes" class="checkbox-group">
+            <!-- dinamik doldurulacak -->
+          </div>
+        </div>
+
+        
+        <div style="margin-top: 12px;">
+          <label>Bireysel raporlanacak sayfalar (seçilenler tek tek):</label>
+          <p style="font-size:12px; margin:4px 0 6px 0; color: var(--text-muted);">
+            Burada seçtiğiniz sayfalar <b>ayrı ayrı</b> raporlanır.
+            Seçilmemiş tüm sayfalar tek bir <b>Toplu (Diğer)</b> raporda birleştirilir.
+          </p>
+          <div id="individualSheetsCheckboxes" class="checkbox-group">
+            <!-- dinamik doldurulacak -->
+          </div>
+        </div>
+
+<button id="btnApplyConfig" style="margin-top: 8px;">Yapılandırmayı Uygula &amp; Tüm Konumları Yükle</button>
+        <div id="configStatus" class="status-text"></div>
+      </div>
+    </div>
+
+    <!-- MAIN PAGE -->
+    <div id="page-main">
+      <!-- Upload -->
+      <div class="card">
+        <h2>1. Excel Dosyasını Yükleyin (.xlsx)</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 0;">
+          Her sayfa bir model türünü temsil eder (örneğin: DC Sistemleri, Aküler, Jeneratörler, UPS vb.).
+        </p>
+        <input type="file" id="fileInput" accept=".xlsx" />
+        <button id="btnLoad">Excel Yükle</button>
+        <div id="uploadStatus" class="status-text"></div>
+      </div>
+
+      <!-- Location & sheet selection -->
+      <div class="card">
+        <h2>2. Konum ve Grup (Sayfa) Seçimi</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 0;">
+          Seçilen konumdaki cihazları, isterseniz sadece belirli bir sayfa (örneğin sadece Aküler) için görüntüleyebilirsiniz.
+        </p>
+        <div class="flex-row">
+          <div>
+            <label for="locationSelect">Konum:</label>
+            <select id="locationSelect">
+              <option value="">-- Konum seçin --</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="sheetFilterSelect">Sayfa filtresi (grup):</label>
+            <select id="sheetFilterSelect">
+              <option value="">Tüm sayfalar</option>
+            </select>
+          </div>
+
+          <button id="btnShowDevices">Cihazları Göster</button>
+        </div>
+        <div id="locationInfo" class="status-text"></div>
+        <div id="locationStatus" class="status-text"></div>
+      </div>
+
+      <!-- Devices & save -->
+      <div class="card">
+        <h2>3. Veriyi İnceleyin ve Düzeltin</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 0;">
+          Hücreleri satır satır inceleyebilir, sayfa bazında toplu olarak <b>Doğru / Hatalı / Kontrol edilmedi</b> işaretleyebilirsiniz.
+          Her sayfa için isterseniz ortak bir not ekleyebilir ve değişiklikleri aşağıdaki butonla tek seferde kaydedebilirsiniz.
+        </p>
+        <div id="devicesContainer">
+          <!-- tablolar buraya gelecek -->
+        </div>
+        <button id="btnSaveAll" class="secondary" style="margin-top: 8px;">Tüm Düzeltmeleri Kaydet</button>
+        <div id="saveStatus" class="status-text"></div>
+      </div>
+
+      <!-- Export corrections -->
+      <div class="card">
+        <h2>4. Düzeltmeleri Dışa Aktarın</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 0;">
+          <b>Çıktı formatı:</b> Orijinal yüklediğiniz Excel ile <b>aynı sayfa yapısı ve kolon düzeni</b> korunur.
+          Sadece <b>düzeltilmiş hücreler</b> yeni değerleriyle yazılır ve hücreler <b>renkli</b> işaretlenir.
+        </p>
+        <div class="flex-row">
+          <button id="btnExportCorrectedExcel" class="secondary">Düzeltilmiş Excel (aynı format + renkli hücreler)</button>
+          <button id="btnExportCSV" class="secondary" title="Opsiyonel: sadece log amaçlı">Düzeltmeleri CSV olarak dışa aktar</button>
+          <span id="exportStatus" class="status-text" style="margin-left: 10px;"></span>
+        </div>
+</div>
+    </div>
+
+    <!-- REPORTS PAGE -->
+    <div id="page-reports" style="display:none;">
+      <div class="card">
+        <h2>5. Raporlar ve Görselleştirmeler</h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 0;">
+          Aşağıdaki özetler ve grafikler, <b>tüm çalışma kitabındaki satırlar</b> üzerinden hesaplanır:
+          seçili sütunlardaki boş hücreler otomatik olarak <b>Hatalı</b> kabul edilir. 
+          Kaydettiğiniz manuel düzeltmeleriniz (Doğru / Hatalı değişiklikleri) bu verinin üzerine yazılır.
+        </p>
+        <div class="flex-row">
+          <button id="btnRefreshReports">Raporları Güncelle</button>
+          <button id="btnExportReportsExcel" class="secondary">Raporları Excel'e Aktar</button>
+        </div>
+
+        <div style="margin-top:8px; font-size:12px;">
+          <p style="margin:0 0 4px 0; color:var(--text-muted);">
+            <b>Rapor kapsamı</b>:
+            Şablon ayarlarında (⚙) seçilen sayfalar <b>tek tek</b> değerlendirilir. Diğer tüm sayfalar toplu raporlanır.
+          </p>
+          <div class="flex-row">
+            <div>
+              <label for="reportScopeSelect">Kapsam seçin:</label>
+              <select id="reportScopeSelect" style="min-width:260px;">
+                <option value="ALL">Tüm sayfalar (Bireysel + Toplu)</option>
+                <option value="GROUPED">Sadece Toplu (Diğer sayfalar)</option>
+              </select>
+              <div style="font-size:11px;color:#9ca3af;">Not: Bireysel seçilen sayfalar listede ayrı ayrı görünür.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin-only filters (only Bölge) -->
+        <div id="reportAdminFilters" style="margin-top:8px; font-size:12px; display:none;">
+          <p style="margin:0 0 4px 0; color:var(--text-muted);">
+            <b>Yönetici filtresi</b> (boş bırakılırsa tüm bölgeler dahildir):
+          </p>
+          <div class="flex-row">
+            <div>
+              <label for="reportBolgeSelect">Bölge filtresi (çoklu seçim):</label>
+              <select id="reportBolgeSelect" multiple size="3" style="min-width:200px;">
+              </select>
+              <div style="font-size:11px;color:#9ca3af;">Hiç seçmezseniz tüm bölgeler dahildir.</div>
+              <div id="reportBolgeUsersInfo" style="font-size:11px;color:#4b5563; margin-top:4px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="reportStatus" class="status-text"></div>
+
+        <!-- Battery Report -->
+        <div class="card" style="margin-top:12px; border-top-color: #2563eb;">
+          <h2 style="margin:0 0 6px 0; font-size:16px; color:#1d4ed8;">Seçili Sayfalar Raporu (Bireysel)</h2>
+          <p style="font-size:12px; color: var(--text-muted); margin:0 0 8px 0;">
+            Şablon ayarlarında bireysel olarak seçilen sayfalar üzerinden hesaplanır. Her sayfa ayrı satır/bar olarak görünür.
+          </p>
+
+          <div id="summaryStatsIndividual" class="summary-grid"></div>
+
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>Seçili Sayfalara Göre Hatalı Alan Sayısı</h3>
+              <canvas id="chartSheetWrongIndividual" height="180"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Şehre Göre Hatalı Alan Sayısı (Seçili)</h3>
+              <canvas id="chartSehirWrongIndividual" height="180"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Bölgeye Göre Hatalı Alan Sayısı (Seçili)</h3>
+              <canvas id="chartBolgeWrongIndividual" height="180"></canvas>
+            </div>
+          </div>
+
+          <div class="mini-table-title report-section-title">Seçili Sayfa Bazında Özet</div>
+          <div class="mini-table-wrapper" id="sheetSummaryTableIndividual"></div>
+
+          <div class="mini-table-title report-section-title">Seçili Sayfalar - Şehre Göre Özet</div>
+          <div class="mini-table-wrapper" id="sehirSummaryTableIndividual"></div>
+
+          <div class="mini-table-title report-section-title">Seçili Sayfalar - Bölgeye Göre Özet</div>
+          <div class="mini-table-wrapper" id="bolgeSummaryTableIndividual"></div>
+        </div>
+
+        <!-- Other Devices Report -->
+        <div class="card" style="margin-top:12px; border-top-color: #0f766e;">
+          <h2 style="margin:0 0 6px 0; font-size:16px; color: var(--primary);">Diğer Sayfalar Raporu (Toplu)</h2>
+          <p style="font-size:12px; color: var(--text-muted); margin:0 0 8px 0;">
+            Bireysel olarak seçilmeyen tüm sayfalar üzerinden hesaplanır.
+          </p>
+
+          <div id="summaryStatsGrouped" class="summary-grid"></div>
+
+          <div class="charts-grid">
+            <div class="chart-card">
+              <h3>Sayfa Bazında Hatalı Alan Sayısı</h3>
+              <canvas id="chartSheetWrongGrouped" height="180"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Şehre Göre Hatalı Alan Sayısı</h3>
+              <canvas id="chartSehirWrongGrouped" height="180"></canvas>
+            </div>
+            <div class="chart-card">
+              <h3>Bölgeye Göre Hatalı Alan Sayısı</h3>
+              <canvas id="chartBolgeWrongGrouped" height="180"></canvas>
+            </div>
+          </div>
+
+          <div class="mini-table-title report-section-title">Sayfa Bazında Özet</div>
+          <div class="mini-table-wrapper" id="sheetSummaryTableGrouped"></div>
+
+          <div class="mini-table-title report-section-title">Şehre Göre Özet</div>
+          <div class="mini-table-wrapper" id="sehirSummaryTableGrouped"></div>
+
+          <div class="mini-table-title report-section-title">Bölgeye Göre Özet</div>
+          <div class="mini-table-wrapper" id="bolgeSummaryTableGrouped"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS PAGE -->
+    <div id="page-users" style="display:none;">
+      <div class="card">
+        <h2>6. Kullanıcı Bilgileri</h2>
+        <p style="font-size:12px; color:var(--text-muted); margin-top:0;">
+          Buradan aktif kullanıcıyı ve (yönetici iseniz) kayıtlı tüm kullanıcıları görebilir, yeni kullanıcı ekleyebilirsiniz.
+        </p>
+        <div id="userInfoBox" style="font-size:12px; margin-top:6px;"></div>
+        <div id="userListBox" style="font-size:12px; margin-top:8px;"></div>
+        <div id="userAdminForm" style="font-size:12px; margin-top:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    const DEFAULT_CHECK_COLS = [
+      "Kod",
+      "Müdürlük",
+      "Bölge",
+      "Şehir",
+      "İlçe",
+      "Merkez",
+      "Seviye",
+      "Cihaz Durumu"
+    ];
+
+    // Columns that are rarely wrong: shown as "Doğru" by default (empty cells still start as Hatalı)
+    const DEFAULT_OK_COLS = ["Kod", "Müdürlük", "Bölge", "Şehir", "İlçe"];
+
+    // Kontrol Çizelgesi.xlsx: fields to check per device sheet (key = sheet title without "N- " prefix)
+    const DEFAULT_CHECKLIST = {
+      "DC SİSTEM": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MARKA","DOĞRULTUCU TİPİ","DC ÇATI SAYISI","DC ÇATI KAPASİTESİ","IP NUMARASI"],
+      "JENERATÖR": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MOTOR MARKASI","MOTOR GÜCÜ (KW)","MOTOR SERİ NO","MOTOR TİPİ","ALTERNATÖR MARKASI","ALTERNATÖR GÜCÜ (KVA)","ALTERNATÖR SERİ NO","ALTERNATÖR TİPİ","MARŞ AKÜSÜ KAPASİTESİ","MARŞ AKÜSÜ İMAL TARİHİ","IP NUMARASI","TANK KAPASİTESİ (LT)"],
+      "KOMPANZASYON": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","PANO GÜCÜ (KVAR)","RÖLE MARKASI","IP NUMARASI"],
+      "UPS": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MARKA","MODEL","GÜCÜ","SERİ NO","UZ DENETİM","IP NO","AKÜ MARKASI","AKÜ KAPASİTESİ (Ah)","AKÜ ADEDİ","AKÜ ÜRETİM TARİHİ"],
+      "JEL AKÜ (ADET)": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MARKA","KAPASİTE","İMAL TARİHİ"],
+      "STASYONER AKÜ (ADET)": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MARKA","KAPASİTE","İMAL TARİHİ"],
+      "KURU AKÜ(ADET)": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MARKASI","AKÜ KAPASİTESİ","İMAL TARİHİ","SERİ NO"],
+      "HT AKÜ(ADET)": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MARKASI","AKÜ KAPASİTESİ","İMAL TARİHİ","SERİ NO"],
+      "LİTYUM AKÜ(ADET)": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MARKASI","AKÜ KAPASİTESİ","İMAL TARİHİ","SERİ NO"],
+      "SOĞUTMA - HASSAS KLİMA": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MARKA","KAPASİTE","SOĞUTUCU GAZ","KLİMA TİPİ","ÜFLEME YÖNÜ","İÇ ÜNİTE SERİ NO","IP NUMARASI","GEÇİCİ KABUL TARİHİ","KLİMA OPTİMİZASYON","CİHAZ ÜRETİM TARİHİ","TTESSA HABERLEŞME MODELİ","SALON TİPİ","SALON NO","KOMPRESÖR TİPİ"],
+      "SOĞUTMA - SPLİT VE DİĞER KLİMA": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MARKA","MODEL","KAPASİTE","SOĞUTUCU GAZ","KLİMA TİPİ","GEÇİCİ KABUL TARİHİ","CİHAZ ÜRETİM TARİHİ","KLİMA OPTİMİZASYON"],
+      "SOĞUTMA - FC BOX": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MARKA","MODEL","IP NUMARASI","NOMİNAL GÜCÜ (KW)","CİHAZ ÜRETİM TARİHİ","CİHAZ TİPİ","TTESSA HABERLEŞME MODELİ","SALON TİPİ","SALON NO","FAN ADET","FAN-1 GKT"],
+      "HARİCİ İZLEME CİHAZI": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","MARKA","MODEL","GEÇİCİ KABUL TARİHİ","IP ADRESİ","SALON TİPİ","SALON NO","TTESSA HABERLEŞME MODELİ"],
+      "AG PANO": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","SAYAÇ ID (ST ABONELER İÇİN)","AKIM TRAFO ORANI","ANA GİRİŞ ŞALTERİ","PANO MARKASI"],
+      "YAKIT TANKI": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","EN","DERİNLİK","YÜKSEKLİK","YARI ÇAP (SİLİNDİLER İÇİN)","TANK TİPİ","YAKIT SEVİYE SENSÖRÜ","KAPASİTE (LT)"],
+      "GÜNEŞ ENERJİSİ": ["Bölge","Şehir","İlçe","Merkez","Seviye","Cihaz Durumu","PANEL MARKASI","KURULU GÜÇ (W)","ÇATI TİPİ","PANEL SAYISI (ADET)","PANEL GÜCÜ (W)","GEÇİCİ KABUL TARİHİ","ŞARJ REGÜLATÖRÜ MARKASI"]
+    };
+
+    // Checklist names that differ from the device list headers: tried in order when the exact name is missing
+    const CHECKLIST_COLUMN_ALIASES = {
+      "IP NO": ["IP NUMARASI", "IP ADRESİ"],
+      "IP ADRESİ": ["IP NUMARASI", "IP NO"],
+      "IP NUMARASI": ["IP NO", "IP ADRESİ"],
+      "AKÜ KAPASİTESİ (Ah)": ["AKÜ KAPASİTESİ", "KAPASİTE"],
+      "AKÜ KAPASİTESİ": ["KAPASİTE", "AKÜ KAPASİTESİ (Ah)"],
+      "KAPASİTE": ["AKÜ KAPASİTESİ"],
+      "MARKASI": ["MARKA"],
+      "MARKA": ["MARKASI"]
+    };
+
+    let checklist = DEFAULT_CHECKLIST;
+
+    let workbookSheets = {};
+    // Keep original workbook for sheet name access
+    let workbookObj = null;
+    // AOA view per sheet (for export with original header order)
+    let workbookAOA = {};
+    // Sheets reported individually (others are grouped)
+    let individualReportSheetsConfigured = new Set();
+    // true once a saved selection exists (even if empty) -> no heuristic defaults
+    let individualSheetsFromConfig = false;
+
+    let currentTemplateSheet = "";
+    let locationCol = "";
+    let deviceCol = "";
+    let columnsToCheck = [];
+    let uniqueLocations = [];
+    let corrections = [];
+    let tableCells = [];
+    let sheetNotes = {};
+
+    let sheetChart = null;
+    let sehirChart = null;
+    let bolgeChart = null;
+
+    let sheetChartIndividual = null;
+    let sehirChartIndividual = null;
+    let bolgeChartIndividual = null;
+
+    let sheetChartGrouped = null;
+    let sehirChartGrouped = null;
+    let bolgeChartGrouped = null;
+
+    // Last computed report results ({ individual, grouped }) for Excel export
+    let lastReports = null;
+
+    let users = [];
+    let currentUser = { name: "admin", role: "admin" };
+
+    function escapeHtml(v) {
+      return String(v ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    // Heuristic default for individual sheets (only used when nothing is configured yet)
+    function isBatterySheetName(name) {
+      const n = String(name || "").toLocaleLowerCase("tr-TR");
+      return n.includes("akü") || n.includes("aku") || n.includes("battery") || n.includes("batarya");
+    }
+
+    function isIndividualSheet(name) {
+      return individualReportSheetsConfigured.has(name);
+    }
+
+    function loadSavedConfig() {
+      try {
+        const cfgStr = localStorage.getItem("inventoryTemplateConfig");
+        return cfgStr ? JSON.parse(cfgStr) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function applyIndividualSheetsFromConfig(cfg) {
+      if (!cfg) return;
+      // Older configs stored "batterySheets"; use them as fallback
+      const ind = Array.isArray(cfg.individualReportSheets) ? cfg.individualReportSheets
+        : (Array.isArray(cfg.batterySheets) ? cfg.batterySheets : null);
+      if (ind) {
+        individualReportSheetsConfigured = new Set(ind);
+        individualSheetsFromConfig = true;
+      }
+    }
+
+    const pageMain = document.getElementById("page-main");
+    const pageReports = document.getElementById("page-reports");
+    const pageUsers = document.getElementById("page-users");
+    const tabMain = document.getElementById("tabMain");
+    const tabReports = document.getElementById("tabReports");
+    const tabUsers = document.getElementById("tabUsers");
+    const currentUserLabel = document.getElementById("currentUserLabel");
+    const loginOverlay = document.getElementById("loginOverlay");
+    const appRoot = document.getElementById("appRoot");
+    const reportAdminFilters = document.getElementById("reportAdminFilters");
+
+    // "7- KURU AKÜ(ADET)" and "Kuru Akü(ADET) " both -> "KURU AKÜ(ADET)"
+    function normalizeSheetKey(name) {
+      return String(name || "")
+        .replace(/^\s*\d+\s*-\s*/, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLocaleUpperCase("tr-TR");
+    }
+
+    function getChecklistForSheet(sheetName) {
+      const key = normalizeSheetKey(sheetName);
+      const found = Object.keys(checklist).find(k => normalizeSheetKey(k) === key);
+      return found ? checklist[found] : null;
+    }
+
+    function getSheetHeaders(sheetName) {
+      const pack = workbookAOA[sheetName];
+      if (pack && pack.headers && pack.headers.length) return pack.headers;
+      const data = workbookSheets[sheetName];
+      return data && data.length ? Object.keys(data[0]) : [];
+    }
+
+    // Maps checklist names to real sheet headers. Returns { columns, missing }.
+    function resolveChecklistColumns(sheetName, wanted) {
+      const headers = getSheetHeaders(sheetName);
+      const columns = [];
+      const missing = [];
+      wanted.forEach(name => {
+        const candidates = [name, ...(CHECKLIST_COLUMN_ALIASES[name] || [])];
+        const hit = candidates.find(c => headers.includes(c));
+        if (!hit) missing.push(name);
+        else if (!columns.includes(hit)) columns.push(hit);
+      });
+      return { columns, missing };
+    }
+
+    // Columns to check for a sheet: from the checklist, or the ⚙ fallback list for sheets not in it
+    function getColumnsForSheet(sheetName) {
+      const wanted = getChecklistForSheet(sheetName);
+      if (!wanted) return columnsToCheck;
+      return resolveChecklistColumns(sheetName, wanted).columns;
+    }
+
+    // Parses a "Kontrol Çizelgesi" workbook: title rows ("1- DC SİSTEM", ...) followed by one field per row in each column
+    function parseChecklistWorkbook(wb) {
+      const result = {};
+      wb.SheetNames.forEach(sn => {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: "" });
+        let titles = null;
+        rows.forEach(r => {
+          const cells = r.map(v => String(v ?? "").trim());
+          if (cells.some(v => /^\d+\s*-/.test(v))) {
+            titles = cells;
+            titles.forEach(t => { if (t) result[normalizeSheetKey(t)] = []; });
+            return;
+          }
+          if (!titles) return;
+          cells.forEach((v, i) => {
+            const t = titles[i];
+            if (t && v) result[normalizeSheetKey(t)].push(v);
+          });
+        });
+      });
+      return result;
+    }
+
+    function renderChecklistSummary() {
+      const wrap = document.getElementById("checklistSummary");
+      if (!wrap) return;
+      const sheetNames = Object.keys(workbookSheets || {});
+      if (!sheetNames.length) {
+        wrap.innerHTML = "<div style='font-size:11px; padding:6px; color:#9ca3af;'>Eşleşmeyi görmek için önce cihaz Excel'ini yükleyin.</div>";
+        return;
+      }
+      let html = "<table><thead><tr><th>Sayfa</th><th>Kontrol edilecek alan</th><th>Uyarı</th></tr></thead><tbody>";
+      sheetNames.forEach(sn => {
+        const wanted = getChecklistForSheet(sn);
+        if (!wanted) {
+          html += `<tr><td>${escapeHtml(sn)}</td><td>${columnsToCheck.length} (genel liste)</td><td>Çizelgede yok, aşağıdaki genel liste kullanılır</td></tr>`;
+          return;
+        }
+        const { columns, missing } = resolveChecklistColumns(sn, wanted);
+        const warn = missing.length ? "Excel'de bulunamadı: " + missing.map(escapeHtml).join(", ") : "";
+        html += `<tr><td>${escapeHtml(sn)}</td><td>${columns.length}</td><td style="color:${warn ? "var(--danger)" : "inherit"}">${warn}</td></tr>`;
+      });
+      html += "</tbody></table>";
+      wrap.innerHTML = html;
+    }
+
+    function showMessage(id, msg, isError = false) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.style.color = isError ? "red" : "#6b7280";
+      el.textContent = msg;
+    }
+
+    function updateCurrentUserLabel() {
+      const roleText = currentUser.role === "admin" ? "Yönetici" : "Kullanıcı";
+      currentUserLabel.textContent = `Aktif kullanıcı: ${currentUser.name || "Misafir"} (${roleText})`;
+      localStorage.setItem("inventoryCurrentUser", JSON.stringify(currentUser));
+      updateUsersPage();
+      updateReportAdminFilters();
+    }
+
+    function updateUsersPage() {
+      const infoBox = document.getElementById("userInfoBox");
+      const listBox = document.getElementById("userListBox");
+      const formBox = document.getElementById("userAdminForm");
+      if (!infoBox || !listBox || !formBox) return;
+      const roleText = currentUser.role === "admin" ? "Yönetici" : "Kullanıcı";
+      infoBox.innerHTML = `<b>Aktif kullanıcı:</b> ${currentUser.name || "(giriş yapılmadı)"} (${roleText})`;
+
+      if (currentUser.role === "admin") {
+        let html = '<p style="font-size:12px;color:var(--text-muted);margin:8px 0 4px 0;">Kayıtlı kullanıcılar:</p>';
+        html += '<table><thead><tr><th>Kullanıcı adı</th><th>Rol</th></tr></thead><tbody>';
+        users.forEach(u => {
+          html += `<tr><td>${escapeHtml(u.username)}</td><td>${u.role === "admin" ? "Yönetici" : "Kullanıcı"}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        listBox.innerHTML = html;
+
+        formBox.innerHTML = `
+          <div style="margin-top:10px; padding:8px; background:#f9fafb; border-radius:8px; border:1px solid #e5e7eb;">
+            <p style="font-size:12px; margin-top:0; font-weight:600;">Yeni kullanıcı ekle (sadece yönetici)</p>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              <div style="flex:1; min-width:120px;">
+                <label for="newUsername">Kullanıcı adı:</label>
+                <input type="text" id="newUsername" placeholder="örn. ali.yilmaz" style="width:100%; font-size:12px;">
+              </div>
+              <div style="flex:1; min-width:120px;">
+                <label for="newPassword">Şifre:</label>
+                <input type="password" id="newPassword" placeholder="Şifre" style="width:100%; font-size:12px;">
+              </div>
+              <div style="flex:1; min-width:120px;">
+                <label for="newRole">Rol:</label>
+                <select id="newRole" style="width:100%; font-size:12px;">
+                  <option value="user">Kullanıcı</option>
+                  <option value="admin">Yönetici</option>
+                </select>
+              </div>
+            </div>
+            <button id="btnAddUser" style="margin-top:6px;">Kullanıcı ekle</button>
+            <div id="userAdminStatus" class="status-text"></div>
+          </div>
+        `;
+        const btnAddUser = document.getElementById("btnAddUser");
+        if (btnAddUser) {
+          btnAddUser.addEventListener("click", () => {
+            const uname = document.getElementById("newUsername").value.trim();
+            const pwd = document.getElementById("newPassword").value;
+            const role = document.getElementById("newRole").value || "user";
+            if (!uname || !pwd) {
+              showMessage("userAdminStatus", "Kullanıcı adı ve şifre zorunludur.", true);
+              return;
+            }
+            if (users.some(u => u.username === uname)) {
+              showMessage("userAdminStatus", "Bu kullanıcı adı zaten kayıtlı.", true);
+              return;
+            }
+            users.push({ username: uname, password: pwd, role });
+            localStorage.setItem("inventoryUsers", JSON.stringify(users));
+            showMessage("userAdminStatus", "Kullanıcı eklendi.", false);
+            updateUsersPage();
+            updateReportAdminFilters();
+          });
+        }
+      } else {
+        listBox.innerHTML = '<p style="font-size:12px;color:var(--text-muted);margin:8px 0 0 0;">Diğer kullanıcıları görmek ve yeni kullanıcı eklemek için Yönetici rolü gerekir.</p>';
+        formBox.innerHTML = "";
+      }
+    }
+
+    function updateReportAdminFilters() {
+      if (currentUser.role === "admin") {
+        reportAdminFilters.style.display = "block";
+      } else {
+        reportAdminFilters.style.display = "none";
+        return;
+      }
+
+      const bolgeSelect = document.getElementById("reportBolgeSelect");
+      if (!bolgeSelect) return;
+
+      const prevBolge = Array.from(bolgeSelect.selectedOptions).map(o => o.value);
+
+      const bolgeSet = new Set();
+      Object.keys(workbookSheets).forEach(sheetName => {
+        const data = workbookSheets[sheetName];
+        if (!data || !data.length) return;
+        data.forEach(row => {
+          const b = (String(row["Bölge"] ?? "").trim()) || "(Boş)";
+          bolgeSet.add(b);
+        });
+      });
+
+      bolgeSelect.innerHTML = "";
+      Array.from(bolgeSet).sort().forEach(b => {
+        const opt = document.createElement("option");
+        opt.value = b;
+        opt.textContent = b;
+        if (prevBolge.includes(b)) opt.selected = true;
+        bolgeSelect.appendChild(opt);
+      });
+
+      // onchange (not addEventListener) so repeated calls don't stack listeners
+      bolgeSelect.onchange = () => {
+        clearReportsUI();
+        const info = document.getElementById("reportBolgeUsersInfo");
+        if (info) info.textContent = "";
+      };
+    }
+
+
+    function updateReportScopeOptions() {
+      const scopeSel = document.getElementById("reportScopeSelect");
+      if (!scopeSel) return;
+
+      const prev = scopeSel.value;
+
+      const base = [
+        { value: "ALL", text: "Tüm sayfalar (Bireysel + Toplu)" },
+        { value: "GROUPED", text: "Sadece Toplu (Diğer sayfalar)" }
+      ];
+
+      const indSheets = Object.keys(workbookSheets || {}).filter(isIndividualSheet).sort();
+
+      scopeSel.innerHTML = "";
+      base.forEach(o => {
+        const opt = document.createElement("option");
+        opt.value = o.value;
+        opt.textContent = o.text;
+        scopeSel.appendChild(opt);
+      });
+
+      if (indSheets.length > 0) {
+        const sep = document.createElement("option");
+        sep.disabled = true;
+        sep.textContent = "──────── Bireysel Sayfalar (tek tek) ────────";
+        scopeSel.appendChild(sep);
+
+        indSheets.forEach(s => {
+          const opt = document.createElement("option");
+          opt.value = "SHEET::" + s;
+          opt.textContent = "Sadece: " + s;
+          scopeSel.appendChild(opt);
+        });
+      }
+
+      // Restore previous if possible
+      const values = Array.from(scopeSel.options).map(o => o.value);
+      scopeSel.value = values.includes(prev) ? prev : "ALL";
+
+      scopeSel.onchange = () => {
+        clearReportsUI();
+      };
+    }
+
+    function renderIndividualSheetsConfigUI() {
+      const wrap = document.getElementById("individualSheetsCheckboxes");
+      if (!wrap) return;
+      wrap.innerHTML = "";
+
+      const sheetNames = Object.keys(workbookSheets || {});
+      if (sheetNames.length === 0) {
+        wrap.innerHTML = "<div style='font-size:11px;color:#9ca3af;'>Excel yüklenmedi veya sayfa adı bulunamadı. Önce Excel yükleyin, sonra ⚙ açın.</div>";
+        return;
+      }
+
+      // Saved selection wins; with no saved selection, pre-check battery/akü sheets as a default.
+      // Checkbox state is only committed on "Yapılandırmayı Uygula".
+      sheetNames.slice().sort().forEach(s => {
+        const label = document.createElement("label");
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = s;
+        cb.checked = individualSheetsFromConfig ? individualReportSheetsConfigured.has(s) : isBatterySheetName(s);
+
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(s));
+        wrap.appendChild(label);
+      });
+    }
+
+    function getSelectedReportFilters() {
+      let selectedBolge = [];
+      if (currentUser.role === "admin") {
+        const bolgeSelect = document.getElementById("reportBolgeSelect");
+        if (bolgeSelect) {
+          selectedBolge = Array.from(bolgeSelect.selectedOptions).map(o => o.value);
+        }
+      }
+
+      const scopeSel = document.getElementById("reportScopeSelect");
+      const reportScope = scopeSel ? (scopeSel.value || "ALL") : "ALL";
+
+      return { selectedBolge, reportScope };
+    }
+
+    function getSelectedColumns() {
+      const container = document.getElementById("columnsCheckboxes");
+      const checkboxes = container.querySelectorAll("input[type='checkbox']");
+      const cols = [];
+      checkboxes.forEach(cb => {
+        if (cb.checked) cols.push(cb.value);
+      });
+      return cols;
+    }
+
+    function makeCorrectionKey(location, device_id, column_name, sheet_name) {
+      return location + "||" + device_id + "||" + column_name + "||" + sheet_name;
+    }
+
+    function upsertCorrection(corr) {
+      const key = makeCorrectionKey(corr.location, corr.device_id, corr.column_name, corr.sheet_name);
+      const idx = corrections.findIndex(c =>
+        makeCorrectionKey(c.location, c.device_id, c.column_name, c.sheet_name) === key
+      );
+      if (idx === -1) {
+        corrections.push(corr);
+      } else {
+        corrections[idx] = corr;
+      }
+    }
+
+    function setTdStatusClass(td, status) {
+      if (status === "Doğru") td.className = "status-ok";
+      else if (status === "Hatalı") td.className = "status-wrong";
+      else td.className = "status-not";
+    }
+
+    // Sets a cell's status via its select's change handler, so the cell's own state stays in sync
+    function setCellStatus(cell, status) {
+      cell.statusSel.value = status;
+      cell.statusSel.dispatchEvent(new Event("change"));
+    }
+
+    // Applies status (+ optional correction/comment) to one column on every displayed row of a sheet.
+    // "Doğru" skips empty originals (they always stay Hatalı); a non-Hatalı status clears the correction.
+    function applyToColumn(sheetName, location, colName, { status, corrected, comment }) {
+      if (!colName) return;
+      let count = 0;
+      tableCells
+        .filter(c => c.sheet_name === sheetName && c.location === location && c.column_name === colName)
+        .forEach(c => {
+          if (status === "Doğru" && String(c.original_value ?? "").trim() === "") return;
+          setCellStatus(c, status);
+          if (status !== "Hatalı") c.corrInput.value = "";
+          else if (corrected && corrected.trim() !== "") c.corrInput.value = corrected;
+          if (comment && comment.trim() !== "") c.commentInput.value = comment;
+          count++;
+        });
+      showMessage("saveStatus", `"${sheetName}" sayfasında ${count} satırda "${colName}" sütunu "${status}" yapıldı. Kaydetmeyi unutmayın.`);
+    }
+
+    function switchPage(page) {
+      pageMain.style.display = page === "main" ? "block" : "none";
+      pageReports.style.display = page === "reports" ? "block" : "none";
+      pageUsers.style.display = page === "users" ? "block" : "none";
+
+      tabMain.classList.toggle("active", page === "main");
+      tabReports.classList.toggle("active", page === "reports");
+      tabUsers.classList.toggle("active", page === "users");
+    }
+
+    tabMain.addEventListener("click", () => switchPage("main"));
+    tabReports.addEventListener("click", () => switchPage("reports"));
+    tabUsers.addEventListener("click", () => switchPage("users"));
+
+    const configModal = document.getElementById("configModal");
+    const btnOpenConfig = document.getElementById("btnOpenConfig");
+    const btnCloseConfig = document.getElementById("btnCloseConfig");
+
+    btnOpenConfig.addEventListener("click", () => {
+      renderIndividualSheetsConfigUI();
+      renderChecklistSummary();
+      if (currentUser.role !== "admin") {
+        showMessage("uploadStatus", "Şablon ayarları sadece Yönetici (admin) tarafından değiştirilebilir.", true);
+        return;
+      }
+      configModal.classList.add("active");
+    });
+
+    btnCloseConfig.addEventListener("click", () => {
+      configModal.classList.remove("active");
+    });
+
+    // Kontrol Çizelgesi yükleme
+    document.getElementById("btnLoadChecklist").addEventListener("click", () => {
+      const input = document.getElementById("checklistFileInput");
+      const file = input.files && input.files[0];
+      if (!file) {
+        showMessage("checklistStatus", "Lütfen önce Kontrol Çizelgesi .xlsx dosyasını seçin.", true);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = parseChecklistWorkbook(XLSX.read(e.target.result, { type: "binary" }));
+          const count = Object.keys(parsed).length;
+          if (count === 0) {
+            showMessage("checklistStatus", "Çizelgede şablon başlığı bulunamadı (örn. \"1- DC SİSTEM\").", true);
+            return;
+          }
+          checklist = parsed;
+          localStorage.setItem("inventoryChecklist", JSON.stringify(checklist));
+          renderChecklistSummary();
+          clearReportsUI();
+          showMessage("checklistStatus", `Kontrol çizelgesi yüklendi: ${count} şablon. Cihazları yeniden görüntüleyin.`);
+        } catch (err) {
+          console.error(err);
+          showMessage("checklistStatus", "Kontrol çizelgesi okunurken hata oluştu.", true);
+        }
+      };
+      reader.readAsBinaryString(file);
+    });
+
+    document.getElementById("btnResetChecklist").addEventListener("click", () => {
+      checklist = DEFAULT_CHECKLIST;
+      localStorage.removeItem("inventoryChecklist");
+      renderChecklistSummary();
+      clearReportsUI();
+      showMessage("checklistStatus", "Varsayılan kontrol çizelgesi kullanılıyor.");
+    });
+
+    configModal.addEventListener("click", (e) => {
+      if (e.target === configModal) {
+        configModal.classList.remove("active");
+      }
+    });
+
+    // LOGOUT
+    const _btnLogout = document.getElementById("btnLogout");
+    if (_btnLogout) _btnLogout.addEventListener("click", () => {
+      localStorage.removeItem("inventoryCurrentUser");
+      currentUser = { name: "", role: "user" };
+      updateCurrentUserLabel();
+      appRoot.style.display = "none";
+      loginOverlay.style.display = "flex";
+    });
+
+    // INIT from localStorage
+    (function initFromStorage() {
+      try {
+        const us = localStorage.getItem("inventoryUsers");
+        if (us) {
+          users = JSON.parse(us);
+        } else {
+          users = [{ username: "admin", password: "admin", role: "admin" }];
+          localStorage.setItem("inventoryUsers", JSON.stringify(users));
+        }
+      } catch (e) {
+        users = [{ username: "admin", password: "admin", role: "admin" }];
+        localStorage.setItem("inventoryUsers", JSON.stringify(users));
+      }
+
+      if (!users.some(u => u.role === "admin")) {
+        users.push({ username: "admin", password: "admin", role: "admin" });
+        localStorage.setItem("inventoryUsers", JSON.stringify(users));
+      }
+
+      // NO-LOGIN mode: always run as admin. A stale "inventoryCurrentUser" from the
+      // login versions (e.g. role "user") would otherwise lock the ⚙ settings with no way back.
+      currentUser = { name: "admin", role: "admin" };
+
+      applyIndividualSheetsFromConfig(loadSavedConfig());
+
+      try {
+        const ck = localStorage.getItem("inventoryChecklist");
+        if (ck) checklist = JSON.parse(ck);
+      } catch (e) {
+        checklist = DEFAULT_CHECKLIST;
+      }
+
+      try {
+        const c = localStorage.getItem("inventoryCorrections");
+        if (c) {
+          corrections = JSON.parse(c);
+        }
+      } catch (e) {
+        corrections = [];
+      }
+
+      updateCurrentUserLabel();
+
+      loginOverlay && (loginOverlay.style.display = "none");
+      appRoot && (appRoot.style.display = "block");
+    })();
+
+    // LOGIN
+    const _btnLogin = document.getElementById("btnLogin");
+    if (_btnLogin) _btnLogin.addEventListener("click", () => {
+      const uname = document.getElementById("loginUsername").value.trim();
+      const pwd = document.getElementById("loginPassword").value;
+      if (!uname || !pwd) {
+        showMessage("loginStatus", "Lütfen kullanıcı adı ve şifre girin.", true);
+        return;
+      }
+      const user = users.find(u => u.username === uname && u.password === pwd);
+      if (!user) {
+        showMessage("loginStatus", "Kullanıcı adı veya şifre hatalı.", true);
+        return;
+      }
+      currentUser = { name: user.username, role: user.role };
+      updateCurrentUserLabel();
+      loginOverlay.style.display = "none";
+      appRoot.style.display = "block";
+      showMessage("loginStatus", "");
+    });
+
+    // 1. Excel yükleme
+    document.getElementById("btnLoad").addEventListener("click", () => {
+      const fileInput = document.getElementById("fileInput");
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        showMessage("uploadStatus", "Lütfen önce bir .xlsx dosyası seçin.", true);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = e.target.result;
+          const workbook = XLSX.read(data, { type: "binary" });
+          workbookObj = workbook;
+          workbookAOA = {};
+
+          workbookSheets = {};
+          const sheetSelect = document.getElementById("sheetSelect");
+          const sheetFilterSelect = document.getElementById("sheetFilterSelect");
+
+          sheetSelect.innerHTML = '<option value="">-- Sayfa seçin --</option>';
+          sheetFilterSelect.innerHTML = '<option value="">Tüm sayfalar</option>';
+
+          workbook.SheetNames.forEach(sheetName => {
+            const ws = workbook.Sheets[sheetName];
+
+            // 1) JSON view for app logic (defval keeps empty cells as "")
+            // Header keys are trimmed so they match the trimmed AOA headers used by the export
+            const json = XLSX.utils.sheet_to_json(ws, { defval: "" }).map(r => {
+              const o = {};
+              Object.keys(r).forEach(k => { o[String(k).trim()] = r[k]; });
+              return o;
+            });
+            workbookSheets[sheetName] = json;
+
+            // 2) AOA view for export (keeps header order as seen in sheet)
+            const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+            const headers = (aoa && aoa.length > 0) ? aoa[0].map(h => String(h ?? "").trim()) : [];
+            workbookAOA[sheetName] = { aoa, headers };
+
+
+            const opt = document.createElement("option");
+            opt.value = sheetName;
+            opt.textContent = sheetName;
+            sheetSelect.appendChild(opt);
+
+            const opt2 = document.createElement("option");
+            opt2.value = sheetName;
+            opt2.textContent = sheetName;
+            sheetFilterSelect.appendChild(opt2);
+          });
+
+          showMessage("uploadStatus", "Excel yüklendi. Şablon ayarları (admin) için ⚙, konum seçimi için adım 2'yi kullanın.");
+          document.getElementById("locationColSelect").innerHTML = '<option value="">-- Sütun seçin --</option>';
+          document.getElementById("deviceColSelect").innerHTML = '<option value="">-- Sütun seçin --</option>';
+          document.getElementById("columnsCheckboxes").innerHTML = "";
+          document.getElementById("locationSelect").innerHTML = '<option value="">-- Konum seçin --</option>';
+          document.getElementById("devicesContainer").innerHTML = "";
+          tableCells = [];
+          sheetNotes = {};
+          showMessage("configStatus", "");
+          showMessage("locationStatus", "");
+          showMessage("locationInfo", "");
+          showMessage("saveStatus", "");
+          showMessage("exportStatus", "");
+          showMessage("reportStatus", "");
+          clearReportsUI();
+          updateReportAdminFilters();
+
+          // varsa kayıtlı şablon ayarlarını otomatik uygula
+          try {
+            const cfg = loadSavedConfig();
+            applyIndividualSheetsFromConfig(cfg);
+            renderIndividualSheetsConfigUI();
+            updateReportScopeOptions();
+            if (cfg) {
+              if (cfg.templateSheet && workbookSheets[cfg.templateSheet]) {
+                const sheetSelectEl = document.getElementById("sheetSelect");
+                sheetSelectEl.value = cfg.templateSheet;
+                sheetSelectEl.dispatchEvent(new Event("change"));
+
+                document.getElementById("locationColSelect").value = cfg.locationCol || "";
+                document.getElementById("deviceColSelect").value = cfg.deviceCol || "";
+
+                const container = document.getElementById("columnsCheckboxes");
+                const checkboxes = container.querySelectorAll("input[type='checkbox']");
+                checkboxes.forEach(cb => {
+                  cb.checked = (cfg.columnsToCheck || []).includes(cb.value);
+                });
+
+                currentTemplateSheet = cfg.templateSheet;
+                columnsToCheck = cfg.columnsToCheck || [];
+                document.getElementById("btnApplyConfig").click();
+                showMessage("uploadStatus", "Kayıtlı şablon ayarları otomatik uygulandı.", false);
+              }
+            }
+          } catch (err) {
+            console.warn("Şablon config okunamadı:", err);
+          }
+        } catch (err) {
+          console.error(err);
+          showMessage("uploadStatus", "Excel dosyası okunurken hata oluştu.", true);
+        }
+      };
+      reader.readAsBinaryString(file);
+    });
+
+    // Şablon sayfa değişince
+    document.getElementById("sheetSelect").addEventListener("change", () => {
+      const sheetName = document.getElementById("sheetSelect").value;
+      currentTemplateSheet = sheetName;
+      if (!sheetName) return;
+
+      const data = workbookSheets[sheetName] || [];
+      if (data.length === 0) {
+        showMessage("configStatus", "Seçilen sayfa boş.", true);
+        return;
+      }
+
+      const sampleRow = data[0];
+      const cols = Object.keys(sampleRow);
+
+      const locSelect = document.getElementById("locationColSelect");
+      const devSelect = document.getElementById("deviceColSelect");
+      const columnsDiv = document.getElementById("columnsCheckboxes");
+
+      locSelect.innerHTML = '<option value="">-- Sütun seçin --</option>';
+      devSelect.innerHTML = '<option value="">-- Sütun seçin --</option>';
+      columnsDiv.innerHTML = "";
+
+      cols.forEach(col => {
+        const opt1 = document.createElement("option");
+        opt1.value = col;
+        opt1.textContent = col;
+        locSelect.appendChild(opt1);
+
+        const opt2 = document.createElement("option");
+        opt2.value = col;
+        opt2.textContent = col;
+        devSelect.appendChild(opt2);
+      });
+
+      if (cols.includes("Merkez")) {
+        locSelect.value = "Merkez";
+      }
+      if (cols.includes("Kod")) {
+        devSelect.value = "Kod";
+      }
+
+      cols.forEach(col => {
+        const label = document.createElement("label");
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = col;
+        if (DEFAULT_CHECK_COLS.includes(col)) {
+          cb.checked = true;
+        }
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(col));
+        columnsDiv.appendChild(label);
+      });
+
+      showMessage("configStatus", "Konum/Cihaz sütunlarını ve kontrol edilecek sütunları seçin.");
+    });
+
+    // Konum seçilince Şehir & Bölge bilgisi
+    document.getElementById("locationSelect").addEventListener("change", () => {
+      const selectedLoc = document.getElementById("locationSelect").value;
+      const infoEl = document.getElementById("locationInfo");
+      if (!selectedLoc) {
+        infoEl.innerHTML = "";
+        return;
+      }
+      if (!locationCol || !Object.keys(workbookSheets).length) {
+        infoEl.innerHTML = "";
+        return;
+      }
+
+      let sehirFound = "";
+      let bolgeFound = "";
+      let found = false;
+
+      outerLoop:
+      for (const sheetName of Object.keys(workbookSheets)) {
+        const data = workbookSheets[sheetName];
+        if (!data || !data.length) continue;
+        for (const row of data) {
+          if (!Object.prototype.hasOwnProperty.call(row, locationCol)) continue;
+          const locVal = String(row[locationCol] ?? "").trim();
+          if (locVal === selectedLoc) {
+            sehirFound = String(row["Şehir"] ?? "").trim();
+            bolgeFound = String(row["Bölge"] ?? "").trim();
+            found = true;
+            break outerLoop;
+          }
+        }
+      }
+
+      if (found) {
+        const sehirLabel = escapeHtml(sehirFound || "(boş)");
+        const bolgeLabel = escapeHtml(bolgeFound || "(boş)");
+        infoEl.innerHTML =
+          `Seçili konum için <b>Şehir</b>: <span class="tag tag-sehir">${sehirLabel}</span> | <b>Bölge</b>: <span class="tag tag-bolge">${bolgeLabel}</span>`;
+      } else {
+        infoEl.textContent = "Bu konum için Şehir/Bölge bilgisi bulunamadı.";
+      }
+    });
+
+    // 2. Yapılandırmayı uygula
+    document.getElementById("btnApplyConfig").addEventListener("click", () => {
+      if (!currentTemplateSheet) {
+        showMessage("configStatus", "Lütfen önce bir şablon sayfa seçin.", true);
+        return;
+      }
+
+      const locColSel = document.getElementById("locationColSelect");
+      const devColSel = document.getElementById("deviceColSelect");
+
+      locationCol = locColSel.value;
+      deviceCol = devColSel.value;
+      columnsToCheck = getSelectedColumns();
+
+
+      // Individual report sheets selection (from UI).
+      // Only read when the list is rendered, so a missing list never wipes the saved selection.
+      const indCbs = document.querySelectorAll("#individualSheetsCheckboxes input[type='checkbox']");
+      if (indCbs.length > 0) {
+        const ind = [];
+        indCbs.forEach(cb => { if (cb.checked) ind.push(cb.value); });
+        individualReportSheetsConfigured = new Set(ind);
+        individualSheetsFromConfig = true;
+      }
+
+      // The ⚙ column list is only a fallback for sheets missing from the checklist
+      const sheetsWithoutChecklist = Object.keys(workbookSheets).filter(s => !getChecklistForSheet(s));
+      if (!locationCol || !deviceCol || (columnsToCheck.length === 0 && sheetsWithoutChecklist.length > 0)) {
+        showMessage(
+          "configStatus",
+          "Lütfen konum sütununu, cihaz kod sütununu seçin" +
+          (sheetsWithoutChecklist.length ? ` ve çizelgede olmayan sayfalar (${sheetsWithoutChecklist.join(", ")}) için en az bir kontrol sütunu işaretleyin.` : "."),
+          true
+        );
+        return;
+      }
+
+      const locSet = new Set();
+      Object.keys(workbookSheets).forEach(sheetName => {
+        const data = workbookSheets[sheetName];
+        if (!data || data.length === 0) return;
+        data.forEach(row => {
+          if (Object.prototype.hasOwnProperty.call(row, locationCol)) {
+            const val = String(row[locationCol] ?? "").trim();
+            if (val) locSet.add(val);
+          }
+        });
+      });
+
+      uniqueLocations = Array.from(locSet).sort();
+      const locSelect = document.getElementById("locationSelect");
+      locSelect.innerHTML = '<option value="">-- Konum seçin --</option>';
+      uniqueLocations.forEach(loc => {
+        const opt = document.createElement("option");
+        opt.value = loc;
+        opt.textContent = loc;
+        locSelect.appendChild(opt);
+      });
+
+      if (uniqueLocations.length === 0) {
+        showMessage("configStatus", "Yapılandırma uygulandı ancak bu sütuna göre konum bulunamadı.", true);
+      } else {
+        showMessage("configStatus", "Yapılandırma uygulandı. Konumlar tüm sayfalardan yüklendi.");
+      }
+
+      if (currentUser.role === "admin") {
+        const cfg = {
+          templateSheet: currentTemplateSheet,
+          locationCol,
+          deviceCol,
+          columnsToCheck,
+          individualReportSheets: Array.from(individualReportSheetsConfigured)
+        };
+        localStorage.setItem("inventoryTemplateConfig", JSON.stringify(cfg));
+      }
+
+      document.getElementById("devicesContainer").innerHTML = "";
+      tableCells = [];
+      sheetNotes = {};
+      clearReportsUI();
+      updateReportAdminFilters();
+      updateReportScopeOptions();
+      showMessage("locationStatus", "Bir konum ve gerekirse bir sayfa (grup) seçip cihazları görüntüleyin.");
+      showMessage("saveStatus", "");
+      showMessage("locationInfo", "");
+      configModal.classList.remove("active");
+    });
+
+    // 3. Konuma göre cihazları göster
+    document.getElementById("btnShowDevices").addEventListener("click", () => {
+      const locSel = document.getElementById("locationSelect");
+      const selectedLoc = locSel.value;
+      const sheetFilter = document.getElementById("sheetFilterSelect").value;
+
+      if (!selectedLoc) {
+        showMessage("locationStatus", "Lütfen önce bir konum seçin.", true);
+        return;
+      }
+
+      const container = document.getElementById("devicesContainer");
+      container.innerHTML = "";
+      tableCells = [];
+
+      let totalRows = 0;
+      let sheetsWithData = 0;
+
+      const sheetNames = Object.keys(workbookSheets);
+
+      sheetNames.forEach(sheetName => {
+        if (sheetFilter && sheetName !== sheetFilter) return;
+
+        const data = workbookSheets[sheetName];
+        if (!data || data.length === 0) return;
+
+        const hasLoc = data.some(row => Object.prototype.hasOwnProperty.call(row, locationCol));
+        const hasDev = data.some(row => Object.prototype.hasOwnProperty.call(row, deviceCol));
+        if (!hasLoc || !hasDev) return;
+
+        const rowsAtLoc = data.filter(r =>
+          String(r[locationCol] ?? "").trim() === selectedLoc
+        );
+        if (rowsAtLoc.length === 0) return;
+
+        sheetsWithData++;
+        totalRows += rowsAtLoc.length;
+
+        const headerRowDiv = document.createElement("div");
+        headerRowDiv.className = "sheet-header-row";
+
+        const sheetHeader = document.createElement("h3");
+        sheetHeader.className = "sheet-title";
+        sheetHeader.textContent = `Sayfa: ${sheetName} (satır: ${rowsAtLoc.length})`;
+        headerRowDiv.appendChild(sheetHeader);
+
+        const bulkBtnsDiv = document.createElement("div");
+
+        const btnAllOk = document.createElement("button");
+        btnAllOk.textContent = "Bu sayfada TÜMÜ Doğru";
+        btnAllOk.className = "small-btn";
+        bulkBtnsDiv.appendChild(btnAllOk);
+
+        const btnAllWrong = document.createElement("button");
+        btnAllWrong.textContent = "Bu sayfada TÜMÜ Hatalı";
+        btnAllWrong.className = "small-btn";
+        bulkBtnsDiv.appendChild(btnAllWrong);
+
+        const btnAllNot = document.createElement("button");
+        btnAllNot.textContent = "Bu sayfada TÜMÜ Kontrol edilmedi";
+        btnAllNot.className = "small-btn";
+        bulkBtnsDiv.appendChild(btnAllNot);
+
+        headerRowDiv.appendChild(bulkBtnsDiv);
+        container.appendChild(headerRowDiv);
+
+        const noteDiv = document.createElement("div");
+        noteDiv.className = "sheet-note-wrapper";
+        const noteLabel = document.createElement("span");
+        noteLabel.textContent = "Ortak Not (bu sayfa için):";
+        const noteInput = document.createElement("input");
+        noteInput.type = "text";
+        noteInput.className = "sheet-note-input";
+        noteInput.value = sheetNotes[sheetName] || "";
+        noteInput.addEventListener("input", () => {
+          sheetNotes[sheetName] = noteInput.value;
+        });
+        noteDiv.appendChild(noteLabel);
+        noteDiv.appendChild(noteInput);
+        container.appendChild(noteDiv);
+
+        const colsInSheet = getColumnsForSheet(sheetName).filter(col =>
+          rowsAtLoc.some(r => Object.prototype.hasOwnProperty.call(r, col))
+        );
+
+        // Column-wide bulk bar: apply status (+ optional correction/comment) to one column on every row of this sheet
+        const colBulkDiv = document.createElement("div");
+        colBulkDiv.className = "col-bulk-bar";
+        const colBulkLabel = document.createElement("span");
+        colBulkLabel.textContent = "Sütun bazında toplu işlem:";
+        colBulkDiv.appendChild(colBulkLabel);
+
+        const colBulkSel = document.createElement("select");
+        colBulkSel.className = "small-select";
+        colsInSheet.forEach(col => {
+          const opt = document.createElement("option");
+          opt.value = col;
+          opt.textContent = col;
+          colBulkSel.appendChild(opt);
+        });
+        colBulkDiv.appendChild(colBulkSel);
+
+        const colBulkCorr = document.createElement("input");
+        colBulkCorr.type = "text";
+        colBulkCorr.placeholder = "Düzeltme değeri (ops.)";
+        colBulkCorr.className = "small-input";
+        colBulkDiv.appendChild(colBulkCorr);
+
+        const colBulkComment = document.createElement("input");
+        colBulkComment.type = "text";
+        colBulkComment.placeholder = "Yorum (ops.)";
+        colBulkComment.className = "small-input";
+        colBulkDiv.appendChild(colBulkComment);
+
+        [["Doğru", "Sütunu TÜMÜ Doğru"], ["Hatalı", "Sütunu TÜMÜ Hatalı"], ["Kontrol edilmedi", "Sütunu sıfırla"]].forEach(([st, text]) => {
+          const b = document.createElement("button");
+          b.className = "small-btn";
+          b.textContent = text;
+          b.addEventListener("click", () => {
+            applyToColumn(sheetName, selectedLoc, colBulkSel.value, {
+              status: st,
+              corrected: st === "Hatalı" ? colBulkCorr.value : null,
+              comment: colBulkComment.value || null
+            });
+          });
+          colBulkDiv.appendChild(b);
+        });
+        container.appendChild(colBulkDiv);
+
+        const table = document.createElement("table");
+        table.className = "device-table";
+        const thead = document.createElement("thead");
+        const headRow = document.createElement("tr");
+
+        const thDev = document.createElement("th");
+        thDev.textContent = deviceCol;
+        headRow.appendChild(thDev);
+
+        colsInSheet.forEach(col => {
+          const th = document.createElement("th");
+          th.textContent = col + " (Orijinal / Durum / Düzeltme / Yorum)";
+          headRow.appendChild(th);
+        });
+
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+
+        rowsAtLoc.forEach(row => {
+          const tr = document.createElement("tr");
+
+          const devId = String(row[deviceCol] ?? "");
+          const tdDev = document.createElement("td");
+          tdDev.textContent = devId;
+          tdDev.className = "device-id-cell";
+          tdDev.dataset.label = deviceCol; // shown as card label on phone/tablet
+          tr.appendChild(tdDev);
+
+          const sehirVal = String(row["Şehir"] ?? "");
+          const bolgeVal = String(row["Bölge"] ?? "");
+
+          colsInSheet.forEach(colName => {
+            const originalValue = String(row[colName] ?? "");
+            const td = document.createElement("td");
+            td.dataset.label = colName; // shown as field label on phone/tablet
+
+            // Empty -> Hatalı; rarely-wrong columns (Kod, Bölge, ...) -> Doğru; others must be checked
+            let status = originalValue.trim() === "" ? "Hatalı"
+              : (DEFAULT_OK_COLS.includes(colName) ? "Doğru" : "Kontrol edilmedi");
+            setTdStatusClass(td, status);
+
+            const origSpan = document.createElement("div");
+            origSpan.textContent = "Orijinal: " + originalValue;
+            td.appendChild(origSpan);
+
+            const statusSel = document.createElement("select");
+            statusSel.className = "small-select";
+            ["Kontrol edilmedi", "Doğru", "Hatalı"].forEach(s => {
+              const opt = document.createElement("option");
+              opt.value = s;
+              opt.textContent = s;
+              statusSel.appendChild(opt);
+            });
+            statusSel.value = status;
+            td.appendChild(statusSel);
+
+            const corrInput = document.createElement("input");
+            corrInput.type = "text";
+            corrInput.placeholder = "Düzeltme değeri";
+            corrInput.className = "small-input";
+            td.appendChild(corrInput);
+
+            const commentInput = document.createElement("input");
+            commentInput.type = "text";
+            commentInput.placeholder = "Yorum";
+            commentInput.className = "small-input";
+            td.appendChild(commentInput);
+
+            // Copy this cell's status/correction/comment to the same column on every row of this sheet
+            const btnCopyCol = document.createElement("button");
+            btnCopyCol.className = "small-btn copy-col-btn";
+            btnCopyCol.textContent = "⇊ Sütuna uygula";
+            btnCopyCol.title = "Bu hücrenin durumunu, düzeltmesini ve yorumunu bu sayfadaki tüm satırlarda aynı sütuna uygula";
+            btnCopyCol.addEventListener("click", () => {
+              applyToColumn(sheetName, selectedLoc, colName, {
+                status: statusSel.value,
+                corrected: corrInput.value,
+                comment: commentInput.value
+              });
+            });
+            td.appendChild(btnCopyCol);
+
+            statusSel.addEventListener("change", () => {
+              status = statusSel.value;
+              setTdStatusClass(td, status);
+            });
+
+            corrInput.addEventListener("input", () => {
+              if (corrInput.value && status !== "Hatalı") {
+                status = "Hatalı";
+                statusSel.value = "Hatalı";
+                setTdStatusClass(td, status);
+              }
+            });
+
+            tr.appendChild(td);
+
+            tableCells.push({
+              location: selectedLoc,
+              sheet_name: sheetName,
+              device_id: devId,
+              column_name: colName,
+              original_value: originalValue,
+              statusSel,
+              corrInput,
+              commentInput,
+              td,
+              sehir: sehirVal,
+              bolge: bolgeVal
+            });
+          });
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        container.appendChild(table);
+
+        // Toplu butonlar
+        const sheetCells = () => tableCells.filter(c => c.sheet_name === sheetName && c.location === selectedLoc);
+
+        btnAllOk.addEventListener("click", () => {
+          sheetCells().forEach(c => {
+            if (!c.original_value || c.original_value.trim() === "") {
+              return; // boş hücreler her zaman hatalı sayılmaya devam eder
+            }
+            setCellStatus(c, "Doğru");
+          });
+        });
+
+        btnAllWrong.addEventListener("click", () => {
+          sheetCells().forEach(c => setCellStatus(c, "Hatalı"));
+        });
+
+        btnAllNot.addEventListener("click", () => {
+          sheetCells().forEach(c => setCellStatus(c, "Kontrol edilmedi"));
+        });
+      });
+
+      if (sheetsWithData === 0) {
+        showMessage("locationStatus", "Seçilen konum ve sütunlara göre veri içeren sayfa bulunamadı.", true);
+        container.innerHTML = "";
+        tableCells = [];
+      } else {
+        const groupText = sheetFilter ? `sayfa "${sheetFilter}"` : "tüm sayfalar";
+        showMessage(
+          "locationStatus",
+          `"${selectedLoc}" konumu için ${sheetsWithData} sayfada toplam ${totalRows} satır bulundu (${groupText}).`
+        );
+      }
+
+      showMessage("saveStatus", "");
+      clearReportsUI();
+    });
+
+    // 4. Tüm düzeltmeleri kaydet (tam kontrol şartı ile)
+    document.getElementById("btnSaveAll").addEventListener("click", () => {
+      if (!tableCells.length) {
+        showMessage("saveStatus", "Kaydedilecek veri yok.", true);
+        return;
+      }
+
+      // 1) Önce kontrol: herhangi bir sayfada 'Kontrol edilmedi' kalan hücre var mı?
+      const incompleteSheets = new Set();
+      tableCells.forEach(cell => {
+        if (cell.statusSel.value === "Kontrol edilmedi") {
+          incompleteSheets.add(cell.sheet_name);
+        }
+      });
+
+      if (incompleteSheets.size > 0) {
+        const list = Array.from(incompleteSheets).join(", ");
+        showMessage(
+          "saveStatus",
+          `Uyarı: Aşağıdaki sayfalarda 'Kontrol edilmedi' durumunda hücreler var: ${list}. ` +
+          `Tüm hücreler kontrol edilmeden kaydedemezsiniz (Doğru veya Hatalı seçmelisiniz).`,
+          true
+        );
+        return;
+      }
+
+      // 2) Artık kaydedebiliriz
+      let savedCount = 0;
+
+      tableCells.forEach(cell => {
+        const status = cell.statusSel.value;
+        const corrected_value = cell.corrInput.value || "";
+        const comment = cell.commentInput.value || "";
+        const sheetNote = sheetNotes[cell.sheet_name] || "";
+
+        if (
+          status !== "Kontrol edilmedi" ||
+          corrected_value.trim() !== "" ||
+          comment.trim() !== "" ||
+          sheetNote.trim() !== ""
+        ) {
+          const corr = {
+            location: cell.location,
+            sheet_name: cell.sheet_name,
+            device_id: cell.device_id,
+            column_name: cell.column_name,
+            original_value: cell.original_value,
+            corrected_value,
+            status,
+            comment,
+            sehir: cell.sehir || "",
+            bolge: cell.bolge || "",
+            sheet_note: sheetNote,
+            user: currentUser.name || "Bilinmiyor",
+            role: currentUser.role || "user",
+            timestamp: new Date().toISOString()
+          };
+          upsertCorrection(corr);
+          savedCount++;
+        }
+      });
+
+      if (savedCount === 0) {
+        showMessage("saveStatus", "Kaydedilecek bir değişiklik yok (hiçbir alan incelenmemiş/değiştirilmemiş).", true);
+      } else {
+        localStorage.setItem("inventoryCorrections", JSON.stringify(corrections));
+        showMessage("saveStatus", `${savedCount} adet alan için düzeltme belleğe kaydedildi.`);
+      }
+    });
+
+    
+    // 5. Corrected Excel export (same format + colored corrected cells)
+    document.getElementById("btnExportCorrectedExcel").addEventListener("click", () => {
+      if (!workbookObj || !Object.keys(workbookSheets).length) {
+        showMessage("exportStatus", "Önce bir Excel dosyası yüklemelisiniz.", true);
+        return;
+      }
+      if (!locationCol || !deviceCol) {
+        showMessage("exportStatus", "Önce şablon ayarlarını yapın (⚙): Konum sütunu ve Cihaz Kod sütunu seçili olmalı.", true);
+        return;
+      }
+      if (!corrections || corrections.length === 0) {
+        showMessage("exportStatus", "Dışa aktarılacak düzeltme yok.", true);
+        return;
+      }
+
+      // Build a new workbook from AOA to keep header order
+      const outWb = XLSX.utils.book_new();
+
+      // Colors (Excel ARGB)
+      const STYLE_YELLOW = { fill: { patternType: "solid", fgColor: { rgb: "FEF9C3" } } }; // light yellow
+      const STYLE_RED    = { fill: { patternType: "solid", fgColor: { rgb: "FEE2E2" } } }; // light red
+
+      // Corrections map: key by sheet + location + device + column
+      const corrBySheet = {};
+      corrections.forEach(c => {
+        if (!c || !c.sheet_name) return;
+        if (!corrBySheet[c.sheet_name]) corrBySheet[c.sheet_name] = [];
+        corrBySheet[c.sheet_name].push(c);
+      });
+
+      // For each sheet, create worksheet from original AOA then apply corrections
+      Object.keys(workbookAOA).forEach(sheetName => {
+        const pack = workbookAOA[sheetName];
+        const aoa = (pack && pack.aoa) ? JSON.parse(JSON.stringify(pack.aoa)) : [];
+        const headers = (pack && pack.headers) ? pack.headers : [];
+
+        // Ensure at least a header row exists
+        if (!aoa || aoa.length === 0) {
+          XLSX.utils.book_append_sheet(outWb, XLSX.utils.aoa_to_sheet([[]]), sheetName);
+          return;
+        }
+
+        // Build header index
+        const colIndex = {};
+        headers.forEach((h, idx) => { colIndex[String(h || "").trim()] = idx; });
+
+        // Find indexes for location/device in this sheet by header names
+        const locIdx = colIndex[locationCol];
+        const devIdx = colIndex[deviceCol];
+
+        const sheetCorrs = corrBySheet[sheetName] || [];
+
+        // Apply each correction
+        sheetCorrs.forEach(c => {
+          const status = c.status || "Kontrol edilmedi";
+          const corrVal = String(c.corrected_value ?? "");
+          const colName = String(c.column_name ?? "");
+
+          // Only write when marked wrong AND corrected_value provided
+          if (status !== "Hatalı") return;
+          if (!corrVal || corrVal.trim() === "") return;
+
+          const targetCol = colIndex[colName];
+          if (targetCol == null) return;
+
+          // locate row by (locationCol, deviceCol)
+          if (locIdx == null || devIdx == null) return;
+
+          const locWanted = String(c.location ?? "").trim();
+          const devWanted = String(c.device_id ?? "").trim();
+
+          // start from row 1 (after header)
+          for (let r = 1; r < aoa.length; r++) {
+            const row = aoa[r] || [];
+            const locHere = String(row[locIdx] ?? "").trim();
+            const devHere = String(row[devIdx] ?? "").trim();
+
+            if (locHere === locWanted && devHere === devWanted) {
+              // Write corrected value in the correct column
+              row[targetCol] = corrVal;
+              aoa[r] = row;
+              break;
+            }
+          }
+        });
+
+        // Convert to sheet
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+        // Apply cell styles for corrected cells (best-effort; depends on SheetJS build)
+        // We re-iterate corrections to style exact cells.
+        const sheetCorrs2 = corrBySheet[sheetName] || [];
+        sheetCorrs2.forEach(c => {
+          const status = c.status || "Kontrol edilmedi";
+          const corrVal = String(c.corrected_value ?? "");
+          if (status !== "Hatalı") return;
+          if (!corrVal || corrVal.trim() === "") return;
+
+          const targetCol = colIndex[String(c.column_name ?? "").trim()];
+          if (targetCol == null) return;
+          if (locIdx == null || devIdx == null) return;
+
+          const locWanted = String(c.location ?? "").trim();
+          const devWanted = String(c.device_id ?? "").trim();
+
+          for (let r = 1; r < aoa.length; r++) {
+            const row = aoa[r] || [];
+            const locHere = String(row[locIdx] ?? "").trim();
+            const devHere = String(row[devIdx] ?? "").trim();
+            if (locHere === locWanted && devHere === devWanted) {
+              const addr = XLSX.utils.encode_cell({ r: r, c: targetCol });
+              if (!ws[addr]) ws[addr] = { t: "s", v: corrVal };
+              ws[addr].v = corrVal;
+
+              // Color rule: if original was empty and this correction existed, mark red; else yellow
+              const originalEmpty = String(c.original_value ?? "").trim() === "";
+              ws[addr].s = originalEmpty ? STYLE_RED : STYLE_YELLOW;
+
+              break;
+            }
+          }
+        });
+
+        XLSX.utils.book_append_sheet(outWb, ws, sheetName);
+      });
+
+      try {
+        XLSX.writeFile(outWb, "duzeltilmis_envanter.xlsx", { bookType: "xlsx", cellStyles: true });
+        showMessage("exportStatus", "Düzeltilmiş Excel oluşturuldu (aynı sayfa/kolon yapısı + renkli hücreler).");
+      } catch (err) {
+        console.error(err);
+        showMessage("exportStatus", "Excel dışa aktarımında hata oluştu. Tarayıcı konsolunu kontrol edin.", true);
+      }
+    });
+
+    // 5. CSV dışa aktar
+    document.getElementById("btnExportCSV").addEventListener("click", () => {
+      if (corrections.length === 0) {
+        showMessage("exportStatus", "Dışa aktarılacak düzeltme yok.", true);
+        return;
+      }
+
+      const header = [
+        "location",
+        "sheet_name",
+        "device_id",
+        "column_name",
+        "original_value",
+        "corrected_value",
+        "status",
+        "comment",
+        "sehir",
+        "bolge",
+        "Ortak Not",
+        "user",
+        "role",
+        "timestamp"
+      ];
+
+      const rows = corrections.map(c => [
+        c.location,
+        c.sheet_name,
+        c.device_id,
+        c.column_name,
+        c.original_value,
+        c.corrected_value,
+        c.status,
+        c.comment,
+        c.sehir,
+        c.bolge,
+        c.sheet_note,
+        c.user,
+        c.role,
+        c.timestamp
+      ]);
+
+      let csv = header.join(",") + "\n";
+      rows.forEach(r => {
+        const escaped = r.map(v => {
+          const val = (v == null ? "" : String(v));
+          if (val.includes('"') || val.includes(",") || val.includes("\n")) {
+            return '"' + val.replace(/"/g, '""') + '"';
+          }
+          return val;
+        });
+        csv += escaped.join(",") + "\n";
+      });
+
+      const csvWithBom = "\uFEFF" + csv;
+      const blob = new Blob([csvWithBom], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "duzeltmeler.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      showMessage("exportStatus", `${corrections.length} kayıt CSV olarak dışa aktarıldı.`);
+    });
+
+    // 6. Raporlar
+    document.getElementById("btnRefreshReports").addEventListener("click", () => {
+      recomputeReports();
+    });
+
+    function clearReportsUI() {
+      const ids = [
+        "summaryStatsIndividual","sheetSummaryTableIndividual","sehirSummaryTableIndividual","bolgeSummaryTableIndividual",
+        "summaryStatsGrouped","sheetSummaryTableGrouped","sehirSummaryTableGrouped","bolgeSummaryTableGrouped"
+      ];
+      ids.forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
+
+
+      const charts = [
+        sheetChartIndividual,sehirChartIndividual,bolgeChartIndividual,
+        sheetChartGrouped,sehirChartGrouped,bolgeChartGrouped
+      ];
+      charts.forEach(ch => { try { if (ch) ch.destroy(); } catch(e){} });
+      sheetChartIndividual = sehirChartIndividual = bolgeChartIndividual = null;
+      sheetChartGrouped = sehirChartGrouped = bolgeChartGrouped = null;
+      // legacy
+      if (sheetChart) { try{sheetChart.destroy();}catch(e){} sheetChart=null; }
+      if (sehirChart) { try{sehirChart.destroy();}catch(e){} sehirChart=null; }
+      if (bolgeChart) { try{bolgeChart.destroy();}catch(e){} bolgeChart=null; }
+
+      lastReports = null;
+    }
+
+    function recomputeReports() {
+      clearReportsUI();
+
+      if (!Object.keys(workbookSheets).length || !locationCol || !deviceCol) {
+        showMessage("reportStatus", "Önce Excel'i yükleyip şablon ayarlarını yapmalısınız (⚙).", true);
+        return;
+      }
+
+      const { selectedBolge, reportScope } = getSelectedReportFilters();
+
+      // Visibility:
+      let relevantCorrections = corrections;
+      if (currentUser.role !== "admin") {
+        relevantCorrections = relevantCorrections.filter(c => c.user === currentUser.name);
+      }
+
+      // Build corrMap
+      const corrMap = {};
+      relevantCorrections.forEach(c => {
+        const key = makeCorrectionKey(c.location, c.device_id, c.column_name, c.sheet_name);
+        corrMap[key] = c;
+      });
+
+      const applyBolgeFilter = (currentUser.role === "admin" && selectedBolge.length > 0);
+
+      function computeForSheets(sheetNames) {
+        let totalControlled = 0, totalCorrect = 0, totalWrong = 0, totalEmptyWrong = 0;
+        const globalDeviceSet = new Set();
+
+        const sheetAgg = {};
+        const sehirAgg = {};
+        const bolgeAgg = {};
+
+        // Visited locations count (only from corrections within these sheets)
+        const visitedLocationsSet = new Set();
+        relevantCorrections.forEach(c => {
+          if (!c.location || c.status === "Kontrol edilmedi") return;
+          if (!sheetNames.includes(c.sheet_name)) return;
+          const b = (c.bolge && c.bolge.trim()) || "(Boş)";
+          if (applyBolgeFilter && !selectedBolge.includes(b)) return;
+          visitedLocationsSet.add(c.location);
+        });
+
+        sheetNames.forEach(sheetName => {
+          const data = workbookSheets[sheetName];
+          if (!data || !data.length) return;
+
+          if (!sheetAgg[sheetName]) {
+            sheetAgg[sheetName] = { controlled: 0, correct: 0, wrong: 0, emptyWrong: 0, deviceSet: new Set() };
+          }
+
+          const sheetCols = getColumnsForSheet(sheetName);
+
+          data.forEach(row => {
+            const locKey = String(row[locationCol] ?? "").trim();
+            const sehirKey = (String(row["Şehir"] ?? "").trim()) || "(Boş)";
+            const bolgeKey = (String(row["Bölge"] ?? "").trim()) || "(Boş)";
+
+            if (applyBolgeFilter && !selectedBolge.includes(bolgeKey)) return;
+
+            if (!sehirAgg[sehirKey]) sehirAgg[sehirKey] = { controlled: 0, correct: 0, wrong: 0, emptyWrong: 0 };
+            if (!bolgeAgg[bolgeKey]) bolgeAgg[bolgeKey] = { controlled: 0, correct: 0, wrong: 0, emptyWrong: 0 };
+
+            const devIdVal = String(row[deviceCol] ?? "");
+
+            sheetCols.forEach(colName => {
+              if (!Object.prototype.hasOwnProperty.call(row, colName)) return;
+
+              const originalValue = String(row[colName] ?? "");
+              const key = makeCorrectionKey(locKey, devIdVal, colName, sheetName);
+
+              let status = "Kontrol edilmedi";
+              const originalEmpty = originalValue.trim() === "";
+
+              if (corrMap[key]) status = corrMap[key].status;
+              else if (originalEmpty) status = "Hatalı";
+
+              if (status === "Kontrol edilmedi") return;
+
+              totalControlled++;
+              globalDeviceSet.add(sheetName + "||" + devIdVal);
+
+              sheetAgg[sheetName].controlled++;
+              sheetAgg[sheetName].deviceSet.add(devIdVal);
+              sehirAgg[sehirKey].controlled++;
+              bolgeAgg[bolgeKey].controlled++;
+
+              if (status === "Doğru") {
+                totalCorrect++;
+                sheetAgg[sheetName].correct++;
+                sehirAgg[sehirKey].correct++;
+                bolgeAgg[bolgeKey].correct++;
+              } else if (status === "Hatalı") {
+                totalWrong++;
+                sheetAgg[sheetName].wrong++;
+                sehirAgg[sehirKey].wrong++;
+                bolgeAgg[bolgeKey].wrong++;
+
+                if (originalEmpty && !corrMap[key]) {
+                  totalEmptyWrong++;
+                  sheetAgg[sheetName].emptyWrong++;
+                  sehirAgg[sehirKey].emptyWrong++;
+                  bolgeAgg[bolgeKey].emptyWrong++;
+                }
+              }
+            });
+          });
+        });
+
+        const totalDevicesControlled = globalDeviceSet.size;
+        const totalReviewed = totalControlled;
+        const percWrong = totalReviewed ? ((totalWrong / totalReviewed) * 100).toFixed(1) : "0.0";
+        const percCorrect = totalReviewed ? ((totalCorrect / totalReviewed) * 100).toFixed(1) : "0.0";
+
+        return {
+          summary: {
+            visitedCount: visitedLocationsSet.size,
+            totalDevicesControlled,
+            totalControlled,
+            totalCorrect,
+            totalWrong,
+            totalEmptyWrong,
+            percCorrect,
+            percWrong
+          },
+          sheetAgg, sehirAgg, bolgeAgg
+        };
+      }
+
+      function addSummaryCard(containerId, label, value, cls = "") {
+        const summaryEl = document.getElementById(containerId);
+        if (!summaryEl) return;
+        const div = document.createElement("div");
+        div.className = "summary-card " + cls;
+        const spanLabel = document.createElement("span");
+        spanLabel.className = "label";
+        spanLabel.textContent = label;
+        const spanValue = document.createElement("span");
+        spanValue.className = "value";
+        spanValue.textContent = value;
+        div.appendChild(spanLabel);
+        div.appendChild(spanValue);
+        summaryEl.appendChild(div);
+      }
+
+      function buildSummaryTable(targetId, aggObj, labelHeader) {
+        const wrapper = document.getElementById(targetId);
+        if (!wrapper) return;
+        const keys = Object.keys(aggObj).filter(k => aggObj[k].controlled > 0);
+        if (keys.length === 0) {
+          wrapper.innerHTML = "<div style='font-size:11px; padding:6px; color:#9ca3af;'>Veri yok.</div>";
+          return;
+        }
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const trHead = document.createElement("tr");
+        ["#", labelHeader, "Kontrol edilen hücre", "Doğru", "Hatalı"].forEach(h => {
+          const th = document.createElement("th");
+          th.textContent = h;
+          trHead.appendChild(th);
+        });
+        thead.appendChild(trHead);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        keys.sort().forEach((k, idx) => {
+          const rowAgg = aggObj[k];
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${idx+1}</td><td>${escapeHtml(k)}</td><td>${rowAgg.controlled}</td><td>${rowAgg.correct}</td><td>${rowAgg.wrong}</td>`;
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+
+        wrapper.innerHTML = "";
+        wrapper.appendChild(table);
+      }
+
+      function buildSheetSummaryTable(targetId, aggObj) {
+        const wrapper = document.getElementById(targetId);
+        if (!wrapper) return;
+        const keys = Object.keys(aggObj).filter(k => aggObj[k].controlled > 0);
+        if (keys.length === 0) {
+          wrapper.innerHTML = "<div style='font-size:11px; padding:6px; color:#9ca3af;'>Veri yok.</div>";
+          return;
+        }
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const trHead = document.createElement("tr");
+        ["#", "Sayfa", "Kontrol edilen cihaz (unique Kod)", "Kontrol edilen hücre", "Doğru", "Hatalı"].forEach(h => {
+          const th = document.createElement("th");
+          th.textContent = h;
+          trHead.appendChild(th);
+        });
+        thead.appendChild(trHead);
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        keys.sort().forEach((k, idx) => {
+          const a = aggObj[k];
+          const devCount = a.deviceSet ? a.deviceSet.size : 0;
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${idx+1}</td><td>${escapeHtml(k)}</td><td>${devCount}</td><td>${a.controlled}</td><td>${a.correct}</td><td>${a.wrong}</td>`;
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+
+        wrapper.innerHTML = "";
+        wrapper.appendChild(table);
+      }
+
+      function createBarChart(canvasId, labels, data, title, color) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return null;
+        const ctx = canvas.getContext("2d");
+        return new Chart(ctx, {
+          type: "bar",
+          data: { labels, datasets: [{ label: title, data, backgroundColor: color.bg, borderColor: color.border, borderWidth: 1, hoverBackgroundColor: color.hover }] },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { x: { ticks: { autoSkip: true, maxRotation: 60, minRotation: 0 } }, y: { beginAtZero: true, ticks: { precision: 0 } } }
+          }
+        });
+      }
+
+      const redColor = { bg: "rgba(220, 38, 38, 0.75)", border: "rgba(185, 28, 28, 1)", hover: "rgba(239, 68, 68, 0.95)" };
+      const blueColor = { bg: "rgba(37, 99, 235, 0.75)", border: "rgba(30, 64, 175, 1)", hover: "rgba(59, 130, 246, 0.95)" };
+      const greenColor = { bg: "rgba(16, 185, 129, 0.75)", border: "rgba(5, 150, 105, 1)", hover: "rgba(34, 197, 94, 0.95)" };
+
+      const allSheets = Object.keys(workbookSheets || {});
+      let individualSheets = allSheets.filter(isIndividualSheet);
+      let groupedSheets = allSheets.filter(s => !isIndividualSheet(s));
+
+      // Apply report scope
+      if (reportScope === "GROUPED") {
+        individualSheets = [];
+      } else if (reportScope.startsWith("SHEET::")) {
+        const only = reportScope.slice("SHEET::".length);
+        individualSheets = allSheets.includes(only) ? [only] : [];
+        groupedSheets = [];
+      }
+
+      const individualRes = computeForSheets(individualSheets);
+      const groupedRes = computeForSheets(groupedSheets);
+      lastReports = { individual: individualRes, grouped: groupedRes };
+
+      // Status
+      showMessage("reportStatus", `Raporlar güncellendi. Bireysel sayfa: ${individualSheets.length} | Toplu diğer: ${groupedSheets.length}`);
+
+      // Individual summary cards
+      const b = individualRes.summary;
+      addSummaryCard("summaryStatsIndividual","Ziyaret edilen Merkez sayısı", b.visitedCount, "blue");
+      addSummaryCard("summaryStatsIndividual","Kontrol edilen cihaz (unique Kod)", b.totalDevicesControlled, "blue");
+      addSummaryCard("summaryStatsIndividual","Kontrol edilen hücre (alan) sayısı", b.totalControlled, "");
+      addSummaryCard("summaryStatsIndividual","Doğru alan sayısı", b.totalCorrect, "green");
+      addSummaryCard("summaryStatsIndividual","Hatalı alan sayısı", b.totalWrong, "red");
+      addSummaryCard("summaryStatsIndividual","Boş hücre (otomatik hatalı)", b.totalEmptyWrong, "red");
+      addSummaryCard("summaryStatsIndividual","Doğru oranı (%)", b.percCorrect, "green");
+      addSummaryCard("summaryStatsIndividual","Hatalı oranı (%)", b.percWrong, "red");
+
+      buildSheetSummaryTable("sheetSummaryTableIndividual", individualRes.sheetAgg);
+      buildSummaryTable("sehirSummaryTableIndividual", individualRes.sehirAgg, "Şehir");
+      buildSummaryTable("bolgeSummaryTableIndividual", individualRes.bolgeAgg, "Bölge");
+
+      const bSheetLabels = Object.keys(individualRes.sheetAgg).filter(k => individualRes.sheetAgg[k].controlled > 0);
+      const bSheetWrong = bSheetLabels.map(k => individualRes.sheetAgg[k].wrong);
+      if (sheetChartIndividual) sheetChartIndividual.destroy();
+      sheetChartIndividual = bSheetLabels.length ? createBarChart("chartSheetWrongIndividual", bSheetLabels, bSheetWrong, "Hatalı", redColor) : null;
+
+      const bSehirLabels = Object.keys(individualRes.sehirAgg).filter(k => individualRes.sehirAgg[k].controlled > 0);
+      const bSehirWrong = bSehirLabels.map(k => individualRes.sehirAgg[k].wrong);
+      if (sehirChartIndividual) sehirChartIndividual.destroy();
+      sehirChartIndividual = bSehirLabels.length ? createBarChart("chartSehirWrongIndividual", bSehirLabels, bSehirWrong, "Hatalı", blueColor) : null;
+
+      const bBolgeLabels = Object.keys(individualRes.bolgeAgg).filter(k => individualRes.bolgeAgg[k].controlled > 0);
+      const bBolgeWrong = bBolgeLabels.map(k => individualRes.bolgeAgg[k].wrong);
+      if (bolgeChartIndividual) bolgeChartIndividual.destroy();
+      bolgeChartIndividual = bBolgeLabels.length ? createBarChart("chartBolgeWrongIndividual", bBolgeLabels, bBolgeWrong, "Hatalı", greenColor) : null;
+
+      // Other summary cards
+      const o = groupedRes.summary;
+      addSummaryCard("summaryStatsGrouped","Ziyaret edilen Merkez sayısı", o.visitedCount, "blue");
+      addSummaryCard("summaryStatsGrouped","Kontrol edilen cihaz (unique Kod)", o.totalDevicesControlled, "blue");
+      addSummaryCard("summaryStatsGrouped","Kontrol edilen hücre (alan) sayısı", o.totalControlled, "");
+      addSummaryCard("summaryStatsGrouped","Doğru alan sayısı", o.totalCorrect, "green");
+      addSummaryCard("summaryStatsGrouped","Hatalı alan sayısı", o.totalWrong, "red");
+      addSummaryCard("summaryStatsGrouped","Boş hücre (otomatik hatalı)", o.totalEmptyWrong, "red");
+      addSummaryCard("summaryStatsGrouped","Doğru oranı (%)", o.percCorrect, "green");
+      addSummaryCard("summaryStatsGrouped","Hatalı oranı (%)", o.percWrong, "red");
+
+      buildSheetSummaryTable("sheetSummaryTableGrouped", groupedRes.sheetAgg);
+      buildSummaryTable("sehirSummaryTableGrouped", groupedRes.sehirAgg, "Şehir");
+      buildSummaryTable("bolgeSummaryTableGrouped", groupedRes.bolgeAgg, "Bölge");
+
+      const oSheetLabels = Object.keys(groupedRes.sheetAgg).filter(k => groupedRes.sheetAgg[k].controlled > 0);
+      const oSheetWrong = oSheetLabels.map(k => groupedRes.sheetAgg[k].wrong);
+      if (sheetChartGrouped) sheetChartGrouped.destroy();
+      sheetChartGrouped = oSheetLabels.length ? createBarChart("chartSheetWrongGrouped", oSheetLabels, oSheetWrong, "Hatalı", redColor) : null;
+
+      const oSehirLabels = Object.keys(groupedRes.sehirAgg).filter(k => groupedRes.sehirAgg[k].controlled > 0);
+      const oSehirWrong = oSehirLabels.map(k => groupedRes.sehirAgg[k].wrong);
+      if (sehirChartGrouped) sehirChartGrouped.destroy();
+      sehirChartGrouped = oSehirLabels.length ? createBarChart("chartSehirWrongGrouped", oSehirLabels, oSehirWrong, "Hatalı", blueColor) : null;
+
+      const oBolgeLabels = Object.keys(groupedRes.bolgeAgg).filter(k => groupedRes.bolgeAgg[k].controlled > 0);
+      const oBolgeWrong = oBolgeLabels.map(k => groupedRes.bolgeAgg[k].wrong);
+      if (bolgeChartGrouped) bolgeChartGrouped.destroy();
+      bolgeChartGrouped = oBolgeLabels.length ? createBarChart("chartBolgeWrongGrouped", oBolgeLabels, oBolgeWrong, "Hatalı", greenColor) : null;
+    }
+
+    // 7. Export reports to Excel
+    document.getElementById("btnExportReportsExcel").addEventListener("click", () => {
+      if (!lastReports) {
+        recomputeReports();
+      }
+      if (!lastReports) {
+        return; // recomputeReports already showed the reason
+      }
+
+      const wb = XLSX.utils.book_new();
+      const ind = lastReports.individual;
+      const grp = lastReports.grouped;
+      const si = ind.summary;
+      const sg = grp.summary;
+
+      const summaryData = [
+        ["Metrik", "Bireysel (Seçili Sayfalar)", "Toplu (Diğer Sayfalar)"],
+        ["Ziyaret edilen Merkez sayısı", si.visitedCount, sg.visitedCount],
+        ["Kontrol edilen cihaz (unique Kod)", si.totalDevicesControlled, sg.totalDevicesControlled],
+        ["Kontrol edilen hücre (alan)", si.totalControlled, sg.totalControlled],
+        ["Doğru alan sayısı", si.totalCorrect, sg.totalCorrect],
+        ["Hatalı alan sayısı", si.totalWrong, sg.totalWrong],
+        ["Boş hücre (otomatik hatalı)", si.totalEmptyWrong, sg.totalEmptyWrong],
+        ["Doğru oranı (%)", si.percCorrect, sg.percCorrect],
+        ["Hatalı oranı (%)", si.percWrong, sg.percWrong]
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryData), "GenelÖzet");
+
+      function appendSheetAgg(sheetAgg, wsName) {
+        const rows = [
+          ["Sayfa", "Kontrol edilen cihaz (unique Kod)", "Kontrol edilen hücre", "Doğru", "Hatalı", "Boş (otomatik)"]
+        ];
+        Object.keys(sheetAgg).sort().forEach(name => {
+          const a = sheetAgg[name];
+          if (!a.controlled) return;
+          rows.push([name, a.deviceSet ? a.deviceSet.size : 0, a.controlled, a.correct, a.wrong, a.emptyWrong]);
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), wsName);
+      }
+
+      function appendKeyAgg(agg, labelHeader, wsName) {
+        const rows = [
+          [labelHeader, "Kontrol edilen hücre", "Doğru", "Hatalı", "Boş (otomatik)"]
+        ];
+        Object.keys(agg).sort().forEach(name => {
+          const a = agg[name];
+          if (!a.controlled) return;
+          rows.push([name, a.controlled, a.correct, a.wrong, a.emptyWrong]);
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), wsName);
+      }
+
+      appendSheetAgg(ind.sheetAgg, "Bireysel-Sayfa");
+      appendKeyAgg(ind.sehirAgg, "Şehir", "Bireysel-Şehir");
+      appendKeyAgg(ind.bolgeAgg, "Bölge", "Bireysel-Bölge");
+      appendSheetAgg(grp.sheetAgg, "Toplu-Sayfa");
+      appendKeyAgg(grp.sehirAgg, "Şehir", "Toplu-Şehir");
+      appendKeyAgg(grp.bolgeAgg, "Bölge", "Toplu-Bölge");
+
+      XLSX.writeFile(wb, "envanter_rapor_ozet.xlsx");
+    });
+  
+</script>
+<script>
+  // Çevrimdışı çalışma: sayfa ve kütüphaneler ilk açılışta önbelleğe alınır
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function (e) { console.warn("SW kaydedilemedi", e); });
+    });
+  }
+</script>
+</body>
+</html>
