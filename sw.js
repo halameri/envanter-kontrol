@@ -1,4 +1,4 @@
-const CACHE = "envanter-kontrol-v3";
+const CACHE = "envanter-kontrol-v4";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icon.svg", "vendor/xlsx.full.min.js", "vendor/chart.umd.min.js"];
 // Yerel kopyası olmayan kütüphane için CDN yedeği de ilk açılışta önbelleğe alınır
 const CDN = ["https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js", "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js", "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js", "https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"];

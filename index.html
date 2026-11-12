@@ -1883,6 +1883,24 @@
                 showMessage("uploadStatus", "Kayıtlı şablon ayarları otomatik uygulandı.", false);
               }
             }
+
+            // Kayıtlı ayar yoksa (ör. yeni cihaz/adres): "Merkez" ve "Kod" sütunlu ilk sayfayı şablon yap ve uygula
+            if (document.getElementById("locationSelect").options.length <= 1) {
+              const names = Object.keys(workbookSheets);
+              const pick = names.find(n => { const h = getSheetHeaders(n); return h.includes("Merkez") && h.includes("Kod"); })
+                || names.find(n => (workbookSheets[n] || []).length > 0);
+              if (pick) {
+                const sheetSelectEl2 = document.getElementById("sheetSelect");
+                sheetSelectEl2.value = pick;
+                sheetSelectEl2.dispatchEvent(new Event("change"));
+                document.getElementById("btnApplyConfig").click();
+                if (document.getElementById("locationSelect").options.length > 1) {
+                  showMessage("uploadStatus", `Excel yüklendi. Şablon otomatik ayarlandı (sayfa: ${pick}). Artık konum seçebilirsiniz.`, false);
+                } else {
+                  showMessage("uploadStatus", `Excel yüklendi ancak "${pick}" sayfasında konum bulunamadı. ⚙ Şablon Ayarları'ndan sayfa ve sütunları seçin.`, true);
+                }
+              }
+            }
           } catch (err) {
             console.warn("Şablon config okunamadı:", err);
           }
