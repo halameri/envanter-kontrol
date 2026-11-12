@@ -11,6 +11,8 @@
   <script src="vendor/xlsx.full.min.js"></script>
   <script>if (typeof XLSX === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
   <!-- Chart.js (grafikler): önce yerel kopya, yoksa CDN -->
+  <script>if (typeof XLSX === "undefined") document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>');</script>
+  <script>if (typeof XLSX === "undefined") document.write('<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');</script>
   <script src="vendor/chart.umd.min.js"></script>
   <script>if (typeof Chart === "undefined") document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>');</script>
   <style>
@@ -3040,6 +3042,20 @@
       XLSX.writeFile(wb, "envanter_rapor_ozet.xlsx");
     });
   
+</script>
+<script>
+  // Kütüphane yüklenemediyse sayfada açık uyarı göster
+  window.addEventListener("DOMContentLoaded", function () {
+    var missing = [];
+    if (typeof XLSX === "undefined") missing.push("Excel (SheetJS)");
+    if (typeof Chart === "undefined") missing.push("Grafik (Chart.js)");
+    if (!missing.length) return;
+    var d = document.createElement("div");
+    d.style.cssText = "background:#fee2e2;border:1px solid #dc2626;color:#7f1d1d;padding:10px 14px;border-radius:10px;margin:0 0 12px 0;font-size:13px";
+    d.textContent = "Uyarı: " + missing.join(", ") + " kütüphanesi yüklenemedi. Bir kez internet bağlantısıyla sayfayı yenileyin (Ctrl+F5); ağınız cdn.jsdelivr.net / cdnjs / unpkg adreslerini engelliyor olabilir.";
+    var root = document.getElementById("appRoot");
+    if (root) root.insertBefore(d, root.firstChild);
+  });
 </script>
 <script>
   // Çevrimdışı çalışma: sayfa ve kütüphaneler ilk açılışta önbelleğe alınır
